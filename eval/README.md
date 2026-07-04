@@ -27,6 +27,8 @@ npm run eval:push -- --enable
 }
 ```
 
+The CLI prints the resolved backend URL, selected scenarios, whether Langfuse traces/scores/observation polling are active, LLM judge mode, per-scenario session IDs, response shape, latency, and Langfuse observation counts when available.
+
 ## Environment
 
 - `EVAL_BACKEND_URL`: API base, default `http://localhost:8080/api`.

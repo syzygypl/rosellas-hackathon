@@ -9,7 +9,7 @@ export async function runScenarioAgainstBackend(params: {
   observationPoller?: (sessionId: string, startedAt: Date, endedAt: Date) => Promise<ObservationSummary>;
 }): Promise<ScenarioOutput> {
   const baseUrl = normalizeApiBase(params.backendUrl || process.env.EVAL_BACKEND_URL || DEFAULT_BACKEND_URL);
-  const sessionId = `eval-${slug(params.runName)}-${params.scenario.id}`;
+  const sessionId = buildSessionId(params.runName, params.scenario.id);
   const started = new Date();
   const startMs = Date.now();
 
@@ -49,6 +49,10 @@ export async function runScenarioAgainstBackend(params: {
 export function normalizeApiBase(value: string): string {
   const trimmed = value.trim().replace(/\/+$/, '');
   return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+}
+
+export function buildSessionId(runName: string, scenarioId: string): string {
+  return `eval-${slug(runName)}-${scenarioId}`;
 }
 
 export function emptyObservations(error?: string): ObservationSummary {

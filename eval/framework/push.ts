@@ -15,6 +15,8 @@ export function buildHostedDefinitions(options: { enable: boolean }): HostedDefi
 
 export async function pushHostedDefinitions(options: { dryRun: boolean; enable: boolean }): Promise<void> {
   const definitions = buildHostedDefinitions({ enable: options.enable });
+  console.log(`  Evaluators: ${definitions.evaluators.map((evaluator) => evaluator.name).join(', ')}`);
+  console.log(`  Rules: ${definitions.rules.map((rule) => rule.name).join(', ')}`);
 
   if (options.dryRun) {
     console.log(JSON.stringify(definitions, null, 2));
