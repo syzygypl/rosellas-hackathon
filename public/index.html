@@ -108,9 +108,10 @@
     <main class="chat">
       <div id="messages">
         <div class="msg bot">
-          Cześć! Opisz swój problem techniczny (najlepiej po angielsku — tak działa najpewniej semantyczne
-          wyszukiwanie parametrów), np. <em>„A delivery drone must fly longer between charges without becoming
-          heavier."</em> Możesz potem dopytywać i doprecyzowywać — każde rozwiązanie odłoży się w panelu obok.
+          Cześć! Opowiedz w 1–2 zdaniach o swoim problemie technicznym — nie musi być od razu precyzyjnie.
+          Zadam Ci najwyżej 2–3 pytania, żeby dobrze zrozumieć sprzeczność (co poprawiamy i co się przez to
+          psuje), a potem policzę zasady wynalazcze TRIZ — rozwiązania odłożą się w panelu obok.
+          <span class="muted">Wskazówka: opisy po angielsku najpewniej mapują się na parametry TRIZ.</span>
         </div>
       </div>
       <div class="composer">
@@ -202,7 +203,7 @@ async function send() {
   addMsg('user', esc(text));
   history.push({ role: 'user', content: text });
   input.value = '';
-  const typing = addMsg('bot typing', 'Analizuję problem TRIZ…');
+  const typing = addMsg('bot typing', 'Piszę…');
 
   try {
     const res = await fetch('/api/chat', {
