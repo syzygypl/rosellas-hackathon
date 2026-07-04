@@ -1,100 +1,122 @@
-<main class="shell">
+<div class="shell">
   <header class="topbar">
     <div>
       <p class="eyebrow">TRIZ AI agent</p>
       <h1>Inventive Problem Solver</h1>
     </div>
     <span class="status" [class.status-busy]="loading()">
-      {{ loading() ? 'Running' : 'Ready' }}
+      {{ loading() ? 'Myślę…' : 'Gotowy' }}
     </span>
   </header>
 
-  @if (error()) {
-    <div class="alert">{{ error() }}</div>
-  }
-
-  <section class="panel form-panel">
-    <form (ngSubmit)="solve()">
-      <label for="problem">Problem</label>
-      <textarea
-        id="problem"
-        name="problem"
-        rows="5"
-        [(ngModel)]="problem"
-        placeholder="A delivery drone must fly longer between charges without becoming heavier."
-      ></textarea>
-
-      <div class="actions">
-        <button type="submit" [disabled]="loading() || !problem.trim()">
-          {{ loading() ? 'Solving...' : 'Solve' }}
-        </button>
-        <button type="button" class="secondary" (click)="reset()" [disabled]="loading()">
-          Reset
-        </button>
-      </div>
-    </form>
-  </section>
-
-  @if (result(); as solved) {
-    <section class="summary-grid">
-      <article class="panel">
-        <h2>Technical contradiction</h2>
-        <p>{{ solved.contradiction }}</p>
-      </article>
-
-      <article class="panel">
-        <h2>Selected pair</h2>
-        <dl class="pair-list">
-          <div>
-            <dt>Improving</dt>
-            <dd>{{ parameterName(solved.improvingParameter) }}</dd>
+  <div class="layout">
+    <main class="chat panel">
+      <div class="messages" #messagesBox>
+        @for (bubble of bubbles(); track $index) {
+          <div class="msg" [class.user]="bubble.cls === 'user'" [class.bot]="bubble.cls === 'bot'">
+            <span [innerHTML]="bubble.html"></span>
+            @if (bubble.solutionId) {
+              <button type="button" class="solution-link" (click)="scrollToSolution(bubble.solutionId!)">
+                → zobacz rozwiązanie #{{ bubble.solutionId }} w panelu
+              </button>
+            }
           </div>
-          <div>
-            <dt>Worsening</dt>
-            <dd>{{ parameterName(solved.worseningParameter) }}</dd>
-          </div>
-        </dl>
-      </article>
-    </section>
-
-    <section class="panel">
-      <h2>Detected TRIZ parameters</h2>
-      @if (solved.detectedParameters.length) {
-        <ul class="parameter-list">
-          @for (parameter of solved.detectedParameters; track parameter.id) {
-            <li>
-              <span class="parameter-id">[{{ parameter.id }}]</span>
-              <div>
-                <strong>{{ parameter.name }}</strong>
-                <p>{{ parameter.description }}</p>
-              </div>
-            </li>
-          }
-        </ul>
-      } @else {
-        <p class="muted">No parameters detected.</p>
-      }
-    </section>
-
-    <section class="result-grid">
-      <article class="panel">
-        <h2>Matrix principles</h2>
-        <pre>{{ solved.principlesFromMatrix }}</pre>
-      </article>
-
-      <article class="panel">
-        <h2>Related principles</h2>
-        <pre>{{ solved.relatedPrinciples }}</pre>
-      </article>
-    </section>
-
-    <section class="panel">
-      <h2>Reasoning trail</h2>
-      <ol class="trail">
-        @for (step of solved.trail; track step) {
-          <li>{{ step }}</li>
         }
-      </ol>
-    </section>
+        @if (loading()) {
+          <div class="msg bot typing">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          </div>
+        }
+      </div>
+
+      <form class="composer" (ngSubmit)="send()">
+        <textarea
+          name="input"
+          rows="1"
+          [(ngModel)]="input"
+          (keydown.enter)="onEnter($event)"
+          placeholder="Opisz problem lub dopytaj…"
+          [disabled]="loading()"
+        ></textarea>
+        <button type="submit" [disabled]="loading() || !input.trim()">Wyślij</button>
+      </form>
+    </main>
+
+    <aside class="solutions panel">
+      <div class="panel-head">
+        💡 Rozwiązania <span class="count">{{ solutions().length }}</span>
+      </div>
+      <div class="solution-list">
+        @if (!solutions().length) {
+          <p class="muted">
+            Tu pojawią się kolejne rozwiązania: wykryte parametry TRIZ, sprzeczność
+            techniczna i zasady wynalazcze z macierzy sprzeczności.
+          </p>
+        }
+        @for (card of solutions(); track card.id) {
+          <article class="card" [id]="'sol-' + card.id" [class.flash]="card.flash">
+            <h2>
+              #{{ card.id }} {{ card.sol.title }}
+              <span class="badge">{{ engineLabel(card.engine) }}</span>
+            </h2>
+
+            @if (card.sol.contradiction) {
+              <p class="contradiction"><strong>Sprzeczność:</strong> {{ card.sol.contradiction }}</p>
+            }
+
+            @if (card.reportHtml) {
+              <details open>
+                <summary>📝 Pełny raport</summary>
+                <div class="report" [innerHTML]="card.reportHtml"></div>
+              </details>
+            }
+
+            <details [open]="!card.reportHtml">
+              <summary>🔎 Parametry TRIZ ({{ card.sol.parameters.length }})</summary>
+              @for (parameter of card.sol.parameters; track parameter.id) {
+                <div class="param">
+                  <span class="pid">[{{ parameter.id }}]</span>
+                  <strong>{{ parameter.name }}</strong><br />
+                  <span class="muted">{{ parameter.description }}</span>
+                </div>
+              } @empty {
+                <p class="muted">brak dopasowania</p>
+              }
+            </details>
+
+            <details [open]="!card.reportHtml">
+              <summary>💡 Zasady wynalazcze z macierzy</summary>
+              <pre>{{ card.sol.principles || '—' }}</pre>
+            </details>
+
+            <details>
+              <summary>🧭 Powiązane zasady / dodatkowe kierunki</summary>
+              <pre>{{ card.sol.related || '—' }}</pre>
+            </details>
+
+            <details>
+              <summary>🧾 Ślad rozumowania</summary>
+              <ol class="trail">
+                @for (step of card.sol.trail; track $index) {
+                  <li>{{ step }}</li>
+                }
+              </ol>
+            </details>
+          </article>
+        }
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div class="toasts" aria-live="polite" aria-atomic="true">
+  @for (toast of toasts(); track toast.id) {
+    <div class="toast" [class.warning]="toast.kind === 'warning'" [class.error]="toast.kind === 'error'">
+      <div class="toast-head">
+        <span>{{ toast.title }}</span>
+        <button class="toast-close" type="button" aria-label="Zamknij" (click)="dismissToast(toast.id)">×</button>
+      </div>
+      <div class="toast-body">{{ toast.body }}</div>
+    </div>
   }
-</main>
+</div>

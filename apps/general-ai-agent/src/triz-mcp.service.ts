@@ -73,7 +73,7 @@ export class TrizMcpService {
   }
 
   /** Parse "• [16] Name\n  description" blocks into structured parameters. */
-  private parseParameters(text: string): TrizParameter[] {
+  parseParameters(text: string): TrizParameter[] {
     const params: TrizParameter[] = [];
     const lines = text.split('\n');
     let current: TrizParameter | null = null;

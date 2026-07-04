@@ -142,6 +142,17 @@ jobs:
           fi
 
           ENV_VARS="$ENV_VARS@CORS_ORIGIN=$CORS_ORIGIN"
+
+          # Deep Agent chat: optional — without the key the backend serves the
+          # LLM-free pipeline and the chat returns a configuration warning.
+          if [ -n "${{ secrets.OPENAI_API_KEY }}" ]; then
+            ENV_VARS="$ENV_VARS@OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}"
+            ENV_VARS="$ENV_VARS@OPENAI_MODEL=${{ vars.OPENAI_MODEL || 'gpt-5.5' }}"
+            ENV_VARS="$ENV_VARS@OPENAI_REASONING_EFFORT=${{ vars.OPENAI_REASONING_EFFORT || 'low' }}"
+          else
+            echo "OPENAI_API_KEY secret not set; deploying without the Deep Agent chat."
+          fi
+
           echo "BACKEND_ENV_VARS=$ENV_VARS" >> "$GITHUB_ENV"
 
       - name: Deploy general-ai-agent to Cloud Run

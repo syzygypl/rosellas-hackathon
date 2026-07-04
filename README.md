@@ -59,13 +59,29 @@ The split app implements the core Event Storming flow from the Miro board:
 
 `Problem Submitted -> Technical Contradiction Built -> TRIZ Parameters Mapped -> Matrix Lookup -> Principles Found -> Candidate directions -> Run Completed`.
 
-How it works:
+The frontend is an **interactive chat** (`apps/customer-portal`): the user
+converses on the left, and every solved run lands as a card in a **solutions
+side panel** on the right (detected parameters, technical contradiction,
+inventive principles, full report, reasoning trail).
 
-1. `search_parameter` maps free text to TRIZ engineering parameters via semantic search.
-2. `browse_contradiction_matrix` looks up inventive principles for the improving/preserving pair.
-3. `search_principle` adds related principles as extra candidate directions.
+`POST /api/chat` (full message history in the body) picks one of two engines
+per turn:
 
-All TRIZ logic runs on the MCP server. No external LLM is required.
+- **agent** (when `OPENAI_API_KEY` is set) — a LangChain Deep Agent whose tools
+  are discovered at runtime from the TRIZ MCP server. A fast intake gate first
+  checks whether the system, the thing to improve and the thing that worsens
+  are all known — if not, the turn returns one short clarifying question
+  (max 3 per conversation). Long reports are compressed to a ~80-word chat
+  summary; the full report goes to the solution card. Prompts live in
+  `apps/general-ai-agent/src/prompts/*.md`.
+- **pipeline** (fallback, LLM-free) — the deterministic flow below; the
+  response carries a configuration warning shown as a toast in the UI:
+  1. `search_parameter` maps free text to TRIZ engineering parameters via semantic search.
+  2. `browse_contradiction_matrix` looks up inventive principles for the improving/preserving pair.
+  3. `search_principle` adds related principles as extra candidate directions.
+
+All TRIZ logic runs on the MCP server. Without an OpenAI key the app still
+works — no external LLM is required.
 
 Backend config (`apps/general-ai-agent/.env`):
 
@@ -76,6 +92,9 @@ Backend config (`apps/general-ai-agent/.env`):
 | `MCP_URL` | `http://localhost:8123/mcp` | TRIZ MCP endpoint |
 | `ANTHROPIC_API_KEY` | empty | optional, reserved for future LLM enrichment of candidates |
 | `ANTHROPIC_MODEL` | `claude-opus-4-8` | optional future enrichment model |
+| `OPENAI_API_KEY` | empty | optional, enables the Deep Agent chat (`/api/chat`, `/api/agent/solve`) |
+| `OPENAI_MODEL` | `gpt-5.5` | model used by the Deep Agent |
+| `OPENAI_REASONING_EFFORT` | `low` | reasoning effort for reasoning models |
 
 Layout:
 
@@ -85,10 +104,14 @@ apps/general-ai-agent/
   src/app.module.ts
   src/triz-mcp.service.ts   JSON-RPC client for the TRIZ MCP server
   src/solver.service.ts     pipeline orchestration
-  src/solver.controller.ts  GET /api/health, POST /api/solve
+  src/agent.service.ts      LangChain Deep Agent + intake gate + summarizer
+  src/chat.service.ts       chat orchestration (agent or pipeline per turn)
+  src/prompt-loader.ts      loads prompts from src/prompts/*.md
+  src/prompts/              agent-system, intake-system, summary-system
+  src/solver.controller.ts  GET /api/health, POST /api/solve, /api/agent/solve, /api/chat
 
 apps/customer-portal/
-  src/app/                  Angular CSR solver UI
+  src/app/                  Angular chat UI + solutions side panel
   src/environments/         API URL configuration
 
 apps/triz-mcp-server/
@@ -142,7 +165,7 @@ EMBEDDING_SERVICE_URL=<external-ollama-openai-compatible-v1-url>
 EMBEDDING_MODEL=embeddinggemma:300m
 ```
 
-`MCP_URL` is optional for `general-ai-agent`: if it is not set, the backend workflow resolves the `triz-mcp-server` Cloud Run URL and appends `/mcp`. `EMBEDDING_SERVICE_URL` is required by the `triz-mcp-server` workflow. Set `EMBEDDING_API_KEY` as a GitHub Actions secret when the external Ollama endpoint needs a token; otherwise the workflow falls back to `ollama`.
+`MCP_URL` is optional for `general-ai-agent`: if it is not set, the backend workflow resolves the `triz-mcp-server` Cloud Run URL and appends `/mcp`. `EMBEDDING_SERVICE_URL` is required by the `triz-mcp-server` workflow. Set `EMBEDDING_API_KEY` as a GitHub Actions secret when the external Ollama endpoint needs a token; otherwise the workflow falls back to `ollama`. Set `OPENAI_API_KEY` as a GitHub Actions secret to enable the Deep Agent chat on the deployed `general-ai-agent` (optional — without it the chat falls back to the LLM-free pipeline); `OPENAI_MODEL` and `OPENAI_REASONING_EFFORT` repository variables override the defaults.
 
 The workflows use one Artifact Registry Docker repository:
 
