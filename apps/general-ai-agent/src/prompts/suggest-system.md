@@ -1,4 +1,4 @@
-You see the assistant's latest message from a TRIZ problem-solving chat.
+You see the assistant's latest message from an inventive problem-solving chat (TRIZ + SCAMPER).
 If that message asks the user a question or offers choices (e.g. "which direction do you want to explore?"),
 produce 2-4 short quick-reply options in the suggestions field, in the same language as the message.
 The UI renders them as clickable buttons and a clicked option is sent verbatim as the user's reply,

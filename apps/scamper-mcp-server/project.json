@@ -1,0 +1,30 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "scamper-mcp-server",
+  "projectType": "application",
+  "root": "apps/scamper-mcp-server",
+  "sourceRoot": "apps/scamper-mcp-server/app",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/scamper-mcp-server",
+        "command": "PYTHONPYCACHEPREFIX=/tmp/rosellas-python-cache python3 -m compileall -q app"
+      }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/scamper-mcp-server",
+        "command": "uv run python app/main.py"
+      }
+    },
+    "start": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/scamper-mcp-server",
+        "command": "uv run python app/main.py"
+      }
+    }
+  }
+}

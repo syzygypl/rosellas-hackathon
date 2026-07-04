@@ -48,7 +48,7 @@ async function bootstrap() {
   await app.listen(port, '0.0.0.0');
 
   new Logger('Bootstrap').log(
-    `AI Agent backend listening on port ${port} (MCP: ${process.env.MCP_URL || 'http://localhost:8123/mcp'})`,
+    `AI Agent backend listening on port ${port} (TRIZ MCP: ${process.env.MCP_URL || 'http://localhost:8123/mcp'}, SCAMPER MCP: ${process.env.SCAMPER_MCP_URL || 'http://localhost:8124/mcp'})`,
   );
 }
 

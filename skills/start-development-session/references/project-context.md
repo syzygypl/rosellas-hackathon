@@ -11,6 +11,7 @@ Use this document to load the Rosellas Hackathon project context before changing
 - Main frontend: Angular 19 standalone SPA served by nginx from `apps/customer-portal/`.
 - Main backend: NestJS 10 API from `apps/general-ai-agent/`, globally prefixed with `/api`.
 - TRIZ MCP server: Python FastMCP service from `apps/triz-mcp-server/`, exposed over Streamable HTTP at `/mcp` and using an external OpenAI-compatible embeddings API.
+- SCAMPER MCP server: Python FastMCP service from `apps/scamper-mcp-server/`, exposed over Streamable HTTP at `/mcp`; serves a static SCAMPER lens knowledge base, no embeddings API needed. The Deep Agent runs both TRIZ and SCAMPER and picks the best solution.
 - Example frontend: Angular 19 standalone SPA served by nginx from `apps/examples/frontend/`.
 - Example backend: NestJS 10 CRUD API from `apps/examples/backend/`, globally prefixed with `/api`.
 - Database: Google Firestore Native, default database, `items` collection.
@@ -40,6 +41,8 @@ Use this document to load the Rosellas Hackathon project context before changing
 | Frontend env | `apps/examples/frontend/src/environments/` | Local default API URL is `http://localhost:8080/api`; workflow rewrites prod env during deploy. |
 | TRIZ MCP app | `apps/triz-mcp-server/` | Python FastMCP server with TRIZ tools, Dockerfile, uv lockfile, and Nx build/serve targets. |
 | TRIZ MCP config | `apps/triz-mcp-server/app/core/config.py` | Reads MCP bind settings and external embeddings provider settings. |
+| SCAMPER MCP app | `apps/scamper-mcp-server/` | Python FastMCP server with SCAMPER lens tools, Dockerfile, uv lockfile, and Nx build/serve targets. |
+| SCAMPER MCP data | `apps/scamper-mcp-server/app/services/scamper.py` | Static dataset of the seven SCAMPER lenses (questions, examples). |
 | Cloud Run images | `apps/examples/backend/Dockerfile`, `apps/examples/frontend/Dockerfile` | Service-specific container packaging. GitHub Actions builds Nx artifacts before Docker packaging. Backend uses `apps/examples/backend/cloudbuild.yaml` with repository root context. |
 | Deploy workflows | `.github/workflows/` | Infra bootstrap plus service-specific workflows named after Cloud Run services. |
 | Infra links | `docs/google-infra-links.md` | Current resource URLs and GCP identifiers. |
@@ -64,6 +67,7 @@ npm run start:backend
 npm run start:frontend
 npm run start:landing
 npm run start:mcp
+npm run start:scamper
 ```
 
 Build:
@@ -74,6 +78,7 @@ npm run build:backend
 npm run build:frontend
 npm run build:landing
 npm run build:mcp
+npm run build:scamper
 ```
 
 Unit tests (Jest, transpile-only ts-jest; specs live next to code as `*.spec.ts` under `apps/<app>/src/`):
@@ -96,6 +101,8 @@ Backend environment:
 - `GIT_SHA`: commit SHA returned by `/api/version`; CI sets this from `GITHUB_SHA`.
 - `BUILD_TIME`: UTC ISO timestamp returned by `/api/version`; CI sets this during deploy.
 - `LOG_LEVEL`: Cloud Run structured application log threshold; defaults to `INFO`.
+- `MCP_URL`: TRIZ MCP server URL, defaults to `http://localhost:8123/mcp`.
+- `SCAMPER_MCP_URL`: SCAMPER MCP server URL, defaults to `http://localhost:8124/mcp`. The Deep Agent loads SCAMPER tools best-effort — when the server is unreachable at agent build time, the chat runs TRIZ-only until restart.
 - `OPENAI_API_KEY`: optional OpenAI-compatible key for the Deep Agent chat. The backend also accepts `EMBEDDING_API_KEY` and legacy `OPEN_AI_API_KEY` as fallbacks, and maps the chosen key to LangChain.
 - `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY`: optional; when both are set, the backend exports Langfuse traces for `/api/chat`, `/api/agent/solve`, `/api/solve`, LangChain model/agent calls, and Nest-side MCP tool calls.
 - `LANGFUSE_BASE_URL`: defaults to `https://cloud.langfuse.com`.
@@ -127,6 +134,14 @@ TRIZ MCP environment:
 - `EMBEDDING_API_KEY`: required for semantic TRIZ tools in deploy. `OPENAI_API_KEY` and local legacy `OPEN_AI_API_KEY` are accepted as fallbacks.
 - The MCP index is built lazily on the first semantic search call so health and `tools/list` do not require an embeddings request during startup.
 
+SCAMPER MCP environment:
+
+- `MCP_HOST`: defaults to `0.0.0.0`.
+- `MCP_PORT`: defaults to `8124`; the Docker image sets this to `8080`.
+- `PORT`: optional Cloud Run bind port override; when present it takes precedence over `MCP_PORT`.
+- `MCP_ALLOWED_HOSTS`, `MCP_ALLOWED_ORIGINS`, `MCP_DNS_REBINDING_PROTECTION`, `LOG_LEVEL`: same semantics as the TRIZ MCP server.
+- No embeddings configuration — the SCAMPER lens knowledge base is static.
+
 Versioning details and the checklist for new apps live in `docs/versioning/README.md`.
 
 ## API Surface
@@ -139,7 +154,7 @@ AI agent backend (`apps/general-ai-agent`, consumed by `apps/customer-portal`):
 | --- | --- | --- |
 | `GET` | `/api/health` | Health check. |
 | `GET` | `/api/version` | Application version, commit SHA, and build time. |
-| `POST` | `/api/chat` | Conversational TRIZ solver. Body: `{ messages: [{ role, content, solved? }] }` (max 40 messages, 8000 chars each). Returns `{ answer, engine, solution, suggestions?, warning? }`; `solution` carries the humanized side-panel card (`title`, `summary`, `contradiction`, `directions`, `nextSteps`) plus technical details (`parameters`, `principles`, `related`, `trail`, `report?`). |
+| `POST` | `/api/chat` | Conversational solver running both TRIZ and SCAMPER, picking the best solution. Body: `{ messages: [{ role, content, solved? }] }` (max 40 messages, 8000 chars each). Returns `{ answer, engine, solution, suggestions?, warning? }`; `solution` carries the humanized side-panel card (`title`, `summary`, `contradiction`, `method`, `methodRationale`, `directions`, `nextSteps`) plus technical details (`parameters`, `principles`, `related`, `trail`, `report?`). |
 | `POST` | `/api/solve` | LLM-free deterministic TRIZ pipeline. Body: `{ problem }`. |
 | `POST` | `/api/agent/solve` | One-shot Deep Agent solve. Body: `{ problem }`; requires `OPENAI_API_KEY`. |
 
@@ -173,10 +188,11 @@ GitHub Actions workflows:
 - `infra-bootstrap.yml`: enables required Google APIs, ensures Firestore, and ensures the `cloud-run-apps` Artifact Registry repository.
 - `crud-backend.yml`: builds `apps/examples/backend` through Nx, packages the prebuilt artifact with Docker, pushes `crud-backend`, and deploys Cloud Run.
 - `crud-frontend.yml`: resolves `crud-backend`, builds `apps/examples/frontend` through Nx, packages the prebuilt artifact with Docker, pushes `crud-frontend`, and deploys Cloud Run.
-- `general-ai-agent.yml`: builds `apps/general-ai-agent` through Nx, packages the prebuilt artifact with Docker, pushes `general-ai-agent`, sets `MCP_URL` to the regional `triz-mcp-server` Cloud Run URL when not configured manually, resolves an OpenAI-compatible key from `OPENAI_API_KEY`, `EMBEDDING_API_KEY`, or legacy `OPEN_AI_API_KEY`, and deploys Cloud Run.
+- `general-ai-agent.yml`: builds `apps/general-ai-agent` through Nx, packages the prebuilt artifact with Docker, pushes `general-ai-agent`, sets `MCP_URL`/`SCAMPER_MCP_URL` to the regional `triz-mcp-server`/`scamper-mcp-server` Cloud Run URLs when not configured manually, resolves an OpenAI-compatible key from `OPENAI_API_KEY`, `EMBEDDING_API_KEY`, or legacy `OPEN_AI_API_KEY`, and deploys Cloud Run.
 - `customer-portal.yml`: resolves `general-ai-agent`, builds `apps/customer-portal` through Nx, packages the prebuilt artifact with Docker, pushes `customer-portal`, and deploys Cloud Run.
 - `research-landing.yml`: resolves `customer-portal`, builds `apps/landing-page` through Nx, packages the prebuilt static artifact with Docker, pushes `research-landing`, and deploys Cloud Run.
 - `triz-mcp-server.yml`: builds `apps/triz-mcp-server` through Nx, packages the Python app with Docker, pushes `triz-mcp-server`, sets external embeddings env vars and MCP allowed hosts, and deploys Cloud Run.
+- `scamper-mcp-server.yml`: compile-checks `apps/scamper-mcp-server`, packages the Python app with Docker, pushes `scamper-mcp-server`, sets MCP allowed hosts, and deploys Cloud Run (no embeddings configuration).
 
 Workflow files and workflow `name` values should match the Cloud Run service they deploy.
 
@@ -190,6 +206,7 @@ Required GitHub Actions variables:
 - `EMBEDDING_SERVICE_URL` for `triz-mcp-server` (`https://api.openai.com/v1`)
 - `EMBEDDING_MODEL` for `triz-mcp-server` (`text-embedding-3-small`)
 - `MCP_URL` for `general-ai-agent` only if the workflow should not auto-resolve `triz-mcp-server`
+- `SCAMPER_MCP_URL` for `general-ai-agent` only if the workflow should not auto-resolve `scamper-mcp-server`
 
 Required GitHub Actions secrets:
 
@@ -232,6 +249,7 @@ Use the narrowest useful verification:
 | Backend TypeScript/API | `npm run build:backend` and `npm test` |
 | Frontend Angular/UI/API client | `npm run build:frontend` and `npm test` |
 | TRIZ MCP server | `npm run build:mcp`, then Docker smoke test against `/mcp` with `tools/list` and one semantic search tool. |
+| SCAMPER MCP server | `npm run build:scamper`, then smoke test against `/mcp` with `tools/list` and one lens tool. |
 | Cross-service or root config | `npm run build` |
 | Docs-only | Review rendered Markdown links and referenced paths. |
 | Workflow/deploy changes | Static review first; run live GitHub/GCP commands only when explicitly requested. |

@@ -34,6 +34,10 @@ export interface SolutionCard {
   nextSteps: string[];
   /** Chat-bubble version of the card, used instead of a separate summarize call. */
   chatSummary: string;
+  /** Method that produced the winning directions: "TRIZ", "SCAMPER" or "TRIZ + SCAMPER". */
+  method: string;
+  /** One sentence explaining why that method fit this problem best. */
+  methodRationale: string;
 }
 
 const SYSTEM_PROMPT = loadPrompt('agent-system.md');
@@ -58,15 +62,26 @@ const CARD_SCHEMA = {
       description:
         'the core trade-off in plain everyday words ("the more X, the worse Y"); empty string when none',
     },
+    method: {
+      type: 'string',
+      description:
+        'method that produced the winning directions: "TRIZ", "SCAMPER" or "TRIZ + SCAMPER" when the best ideas mix both',
+    },
+    methodRationale: {
+      type: 'string',
+      description:
+        'one short sentence in the user language explaining why the chosen method fit this problem better than the other',
+    },
     directions: {
       type: 'array',
-      description: '2-4 solution directions grounded in the provided tool outputs',
+      description: '2-4 winning solution directions grounded in the provided tool outputs',
       items: {
         type: 'object',
         properties: {
           principle: {
             type: 'string',
-            description: 'inventive principle number and translated name, e.g. "Zasada 1 — Segmentacja"',
+            description:
+              'source of the direction: TRIZ principle ("Zasada 1 — Segmentacja") or SCAMPER lens ("SCAMPER: Eliminacja")',
           },
           idea: {
             type: 'string',
@@ -94,7 +109,7 @@ const CARD_SCHEMA = {
         'mention that details are in the side panel',
     },
   },
-  required: ['title', 'summary', 'contradiction', 'directions', 'nextSteps', 'chatSummary'],
+  required: ['title', 'summary', 'contradiction', 'method', 'methodRationale', 'directions', 'nextSteps', 'chatSummary'],
   additionalProperties: false,
 } as const;
 
@@ -140,13 +155,15 @@ const INTAKE_SCHEMA = {
 
 /**
  * Agentic solving path: a LangChain Deep Agent whose tools are discovered
- * dynamically from the TRIZ MCP server (tools/list) — nothing is hardcoded.
- * Complements the deterministic SolverService pipeline; requires OPENAI_API_KEY.
+ * dynamically from the TRIZ and SCAMPER MCP servers (tools/list) — nothing is
+ * hardcoded. Complements the deterministic SolverService pipeline; requires
+ * OPENAI_API_KEY.
  */
 @Injectable()
 export class AgentService {
   private readonly logger = new Logger(AgentService.name);
   private readonly mcpUrl = process.env.MCP_URL || 'http://localhost:8123/mcp';
+  private readonly scamperMcpUrl = process.env.SCAMPER_MCP_URL || 'http://localhost:8124/mcp';
   private readonly model = process.env.OPENAI_MODEL || 'gpt-5.5';
   private readonly reasoningEffort = (process.env.OPENAI_REASONING_EFFORT ||
     'low') as 'minimal' | 'low' | 'medium' | 'high';
@@ -172,7 +189,7 @@ export class AgentService {
     return [
       `OpenAI agent is disabled because none of ${OPENAI_API_KEY_ENV_NAMES.join(', ')} is set.`,
       'Set OPENAI_API_KEY in .env or in the process environment to enable the agent.',
-      `Current agent config: OPENAI_MODEL=${this.model}, OPENAI_REASONING_EFFORT=${this.reasoningEffort}, MCP_URL=${this.mcpUrl}.`,
+      `Current agent config: OPENAI_MODEL=${this.model}, OPENAI_REASONING_EFFORT=${this.reasoningEffort}, MCP_URL=${this.mcpUrl}, SCAMPER_MCP_URL=${this.scamperMcpUrl}.`,
       'The LLM-free /api/solve pipeline remains available.',
     ].join(' ');
   }
@@ -196,16 +213,30 @@ export class AgentService {
     return this.agentPromise;
   }
 
-  private async buildAgent() {
+  private async loadMcpTools(server: string, url: string) {
     const client = new MultiServerMCPClient({
       mcpServers: {
-        triz: { transport: 'http', url: this.mcpUrl },
+        [server]: { transport: 'http', url },
       },
     });
     const tools = await client.getTools();
     this.logger.log(
-      `Loaded ${tools.length} tool(s) from TRIZ MCP: ${tools.map((t) => t.name).join(', ')}`,
+      `Loaded ${tools.length} tool(s) from ${server} MCP: ${tools.map((t) => t.name).join(', ')}`,
     );
+    return tools;
+  }
+
+  private async buildAgent() {
+    // TRIZ stays mandatory (as before); SCAMPER is best-effort so the agent
+    // keeps working until the scamper-mcp-server service is reachable.
+    const tools = await this.loadMcpTools('triz', this.mcpUrl);
+    try {
+      tools.push(...(await this.loadMcpTools('scamper', this.scamperMcpUrl)));
+    } catch (err) {
+      this.logger.warn(
+        `SCAMPER MCP unavailable at ${this.scamperMcpUrl}; agent runs TRIZ-only until restart: ${err}`,
+      );
+    }
     return createDeepAgent({
       // reasoning.effort is ignored by non-reasoning models, so safe unconditionally.
       // GPT-5.x rejects tools + reasoning_effort on /v1/chat/completions — force Responses API.
@@ -377,7 +408,7 @@ export class AgentService {
                 `## Assistant final answer`,
                 answer,
                 ``,
-                `## Raw TRIZ tool outputs`,
+                `## Raw solver tool outputs (TRIZ and/or SCAMPER)`,
                 toolDump,
               ].join('\n'),
             },
@@ -412,9 +443,11 @@ export class AgentService {
           directions,
           nextSteps,
           chatSummary: String(result?.chatSummary ?? '').trim(),
+          method: String((result as Partial<SolutionCard>)?.method ?? '').trim(),
+          methodRationale: String((result as Partial<SolutionCard>)?.methodRationale ?? '').trim(),
         };
         this.logger.log(
-          `Solution card: "${card.title}" with ${card.directions.length} direction(s), ${card.nextSteps.length} next step(s)`,
+          `Solution card: "${card.title}" (method: ${card.method || 'n/a'}) with ${card.directions.length} direction(s), ${card.nextSteps.length} next step(s)`,
         );
         return card;
       },

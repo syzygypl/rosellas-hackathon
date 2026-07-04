@@ -6,6 +6,7 @@ Nx workspace for the hackathon apps.
 - `apps/landing-page/`: static Angular landing page for the research platform, served by nginx on Cloud Run.
 - `apps/customer-portal/`: Angular CSR frontend and main customer-facing app.
 - `apps/triz-mcp-server/`: Python MCP server exposing TRIZ tools over Streamable HTTP.
+- `apps/scamper-mcp-server/`: Python MCP server exposing SCAMPER ideation tools over Streamable HTTP.
 - `apps/examples/backend/`: previous example NestJS API under `/api`, backed by Firestore.
 - `apps/examples/frontend/`: previous example Angular SPA served by nginx on Cloud Run.
 - root workspace: Nx monorepo with one root `package.json` and `package-lock.json`.
@@ -15,6 +16,8 @@ Nx workspace for the hackathon apps.
 ## Prereqs
 
 The TRIZ MCP server must be running and reachable at `MCP_URL` (default `http://localhost:8123/mcp`). It uses an external OpenAI-compatible embeddings API through `EMBEDDING_SERVICE_URL`; embedding infrastructure is not hosted inside this monorepo.
+
+The SCAMPER MCP server should also be running at `SCAMPER_MCP_URL` (default `http://localhost:8124/mcp`) so the Deep Agent can compare both methods; it needs no configuration. When it is unreachable, the chat runs TRIZ-only.
 
 Install dependencies from the repository root:
 
@@ -35,6 +38,12 @@ Run the MCP server:
 cp apps/triz-mcp-server/.env.example apps/triz-mcp-server/.env
 # edit apps/triz-mcp-server/.env and set EMBEDDING_API_KEY
 npm run start:mcp
+```
+
+Run the SCAMPER MCP server (no configuration needed):
+
+```bash
+npm run start:scamper
 ```
 
 Run the main frontend:
@@ -68,20 +77,23 @@ inventive principles, full report, reasoning trail).
 per turn:
 
 - **agent** (when `OPENAI_API_KEY` is set) — a LangChain Deep Agent whose tools
-  are discovered at runtime from the TRIZ MCP server. A fast intake gate first
-  checks whether the system, the thing to improve and the thing that worsens
-  are all known — if not, the turn returns one short clarifying question
-  (max 3 per conversation). Long reports are compressed to a ~80-word chat
-  summary; the full report goes to the solution card. Prompts live in
-  `apps/general-ai-agent/src/prompts/*.md`.
+  are discovered at runtime from the TRIZ and SCAMPER MCP servers. A fast intake
+  gate first checks whether the system, the thing to improve and the thing that
+  worsens are all known — if not, the turn returns one short clarifying question
+  (max 3 per conversation). After intake the agent runs BOTH methods (TRIZ
+  contradiction analysis and the SCAMPER lens checklist), compares the candidate
+  solutions, and delivers the best ones; the solution card carries `method` and
+  `methodRationale` saying which method won and why. Long reports are compressed
+  to a ~80-word chat summary; the full report goes to the solution card. Prompts
+  live in `apps/general-ai-agent/src/prompts/*.md`.
 - **pipeline** (fallback, LLM-free) — the deterministic flow below; the
   response carries a configuration warning shown as a toast in the UI:
   1. `search_parameter` maps free text to TRIZ engineering parameters via semantic search.
   2. `browse_contradiction_matrix` looks up inventive principles for the improving/preserving pair.
   3. `search_principle` adds related principles as extra candidate directions.
 
-All TRIZ logic runs on the MCP server. Without an OpenAI key the app still
-works — no external LLM is required.
+All TRIZ and SCAMPER knowledge lives on the MCP servers. Without an OpenAI key
+the app still works (TRIZ pipeline only) — no external LLM is required.
 
 Backend config (`apps/general-ai-agent/.env`):
 
@@ -91,6 +103,7 @@ Backend config (`apps/general-ai-agent/.env`):
 | `PORT` | Cloud Run provided | production runtime port; ignored by local backend starts unless `NODE_ENV=production` |
 | `CORS_ORIGIN` | `http://localhost:4200` | allowed frontend origin |
 | `MCP_URL` | `http://localhost:8123/mcp` | TRIZ MCP endpoint |
+| `SCAMPER_MCP_URL` | `http://localhost:8124/mcp` | SCAMPER MCP endpoint |
 | `ANTHROPIC_API_KEY` | empty | optional, reserved for future LLM enrichment of candidates |
 | `ANTHROPIC_MODEL` | `claude-opus-4-8` | optional future enrichment model |
 | `OPENAI_API_KEY` | empty | optional, enables the Deep Agent chat (`/api/chat`, `/api/agent/solve`); falls back to `EMBEDDING_API_KEY`, then legacy `OPEN_AI_API_KEY` |
@@ -142,6 +155,11 @@ apps/triz-mcp-server/
   app/tools/                registered TRIZ MCP tools
   app/services/triz.py      pytriz store and external embedding client
 
+apps/scamper-mcp-server/
+  app/main.py               FastMCP Streamable HTTP server
+  app/tools/                registered SCAMPER MCP tools
+  app/services/scamper.py   static SCAMPER lens knowledge base
+
 apps/landing-page/
   src/app/                  static research landing page
   src/environments/         workspace URL and build metadata
@@ -155,10 +173,12 @@ npm run build:ai-agent
 npm run build:backend
 npm run build:frontend
 npm run build:mcp
+npm run build:scamper
 npm run build:landing
 npm run start:backend
 npm run start:frontend
 npm run start:mcp
+npm run start:scamper
 npm run start:landing
 ```
 
@@ -189,7 +209,7 @@ EMBEDDING_SERVICE_URL=https://api.openai.com/v1
 EMBEDDING_MODEL=text-embedding-3-small
 ```
 
-`MCP_URL` is optional for `general-ai-agent`: if it is not set, the backend workflow uses the regional `triz-mcp-server` Cloud Run URL and appends `/mcp`. The MCP workflow uses `GCP_PROJECT_NUMBER` to allow the Cloud Run Host header in MCP transport security. Set `EMBEDDING_API_KEY` as a GitHub Actions repository secret for the `triz-mcp-server` embeddings client. Set `OPENAI_API_KEY` as a GitHub Actions secret to enable the Deep Agent chat on the deployed `general-ai-agent`; if it is absent, the workflow falls back to `EMBEDDING_API_KEY`, then legacy `OPEN_AI_API_KEY`. Without any compatible key the chat falls back to the LLM-free pipeline. `OPENAI_MODEL` and `OPENAI_REASONING_EFFORT` repository variables override the defaults. Set `LANGFUSE_SECRET_KEY` as a secret and `LANGFUSE_PUBLIC_KEY` as a repository variable to enable deployed Langfuse tracing; `LANGFUSE_BASE_URL` and `LANGFUSE_TRACING_ENVIRONMENT` are optional variables.
+`MCP_URL` and `SCAMPER_MCP_URL` are optional for `general-ai-agent`: if they are not set, the backend workflow uses the regional `triz-mcp-server` / `scamper-mcp-server` Cloud Run URLs and appends `/mcp`. The MCP workflow uses `GCP_PROJECT_NUMBER` to allow the Cloud Run Host header in MCP transport security. Set `EMBEDDING_API_KEY` as a GitHub Actions repository secret for the `triz-mcp-server` embeddings client. Set `OPENAI_API_KEY` as a GitHub Actions secret to enable the Deep Agent chat on the deployed `general-ai-agent`; if it is absent, the workflow falls back to `EMBEDDING_API_KEY`, then legacy `OPEN_AI_API_KEY`. Without any compatible key the chat falls back to the LLM-free pipeline. `OPENAI_MODEL` and `OPENAI_REASONING_EFFORT` repository variables override the defaults. Set `LANGFUSE_SECRET_KEY` as a secret and `LANGFUSE_PUBLIC_KEY` as a repository variable to enable deployed Langfuse tracing; `LANGFUSE_BASE_URL` and `LANGFUSE_TRACING_ENVIRONMENT` are optional variables.
 
 The workflows use one Artifact Registry Docker repository:
 
@@ -199,6 +219,7 @@ europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/crud-frontend
 europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/general-ai-agent
 europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/customer-portal
 europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/triz-mcp-server
+europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/scamper-mcp-server
 europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/research-landing
 ```
 
@@ -216,10 +237,11 @@ After that:
 - changes under `apps/landing-page/**` deploy only `research-landing`;
 - changes under `apps/customer-portal/**` deploy only `customer-portal`;
 - changes under `apps/triz-mcp-server/**` deploy only `triz-mcp-server`;
+- changes under `apps/scamper-mcp-server/**` deploy only `scamper-mcp-server`;
 - frontend workflows resolve the paired backend Cloud Run URL and build Angular with `API_URL=<backend-url>/api`;
 - the landing workflow resolves the `customer-portal` Cloud Run URL and builds Angular with `workspaceUrl=<customer-portal-url>`;
 - backend workflows set version metadata and CORS for the paired frontend regional URL.
-- `general-ai-agent` also sets `MCP_URL`, using the regional `triz-mcp-server` URL automatically when `MCP_URL` is not configured manually.
+- `general-ai-agent` also sets `MCP_URL` and `SCAMPER_MCP_URL`, using the regional `triz-mcp-server` / `scamper-mcp-server` URLs automatically when they are not configured manually.
 
 ## One-Time GCP IAM
 

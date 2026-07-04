@@ -1,0 +1,137 @@
+name: scamper-mcp-server
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'apps/scamper-mcp-server/**'
+      - 'package.json'
+      - 'nx.json'
+      - '.github/workflows/scamper-mcp-server.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  ARTIFACT_REPOSITORY: cloud-run-apps
+  CLOUD_BUILD_SOURCE_BUCKET: ${{ vars.CLOUD_BUILD_SOURCE_BUCKET || 'crud-hackathon-ml-20260703-github-cloud-build-source' }}
+  IMAGE_NAME: scamper-mcp-server
+  MCP_SERVICE: scamper-mcp-server
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  PROJECT_NUMBER: ${{ vars.GCP_PROJECT_NUMBER }}
+  REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
+
+jobs:
+  deploy:
+    name: Build and deploy scamper-mcp-server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate configuration
+        run: |
+          test -n "$PROJECT_ID"
+          test -n "$PROJECT_NUMBER"
+          test -n "${{ vars.WIF_PROVIDER }}"
+          test -n "${{ vars.GCP_SERVICE_ACCOUNT }}"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Check scamper-mcp-server sources
+        run: PYTHONPYCACHEPREFIX=/tmp/rosellas-python-cache python3 -m compileall -q apps/scamper-mcp-server/app
+
+      - name: Build and publish scamper-mcp-server image
+        run: |
+          IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$ARTIFACT_REPOSITORY/$IMAGE_NAME:$GITHUB_SHA"
+          BUILD_ID="$(gcloud builds submit . \
+            --config apps/scamper-mcp-server/cloudbuild.yaml \
+            --gcs-source-staging-dir "gs://$CLOUD_BUILD_SOURCE_BUCKET/source" \
+            --gcs-log-dir "gs://$CLOUD_BUILD_SOURCE_BUCKET/logs" \
+            --substitutions "_IMAGE=$IMAGE" \
+            --async \
+            --format='value(id)' \
+            --project "$PROJECT_ID")"
+
+          echo "Cloud Build: https://console.cloud.google.com/cloud-build/builds/$BUILD_ID?project=$PROJECT_ID"
+          for _ in {1..120}; do
+            STATUS="$(gcloud builds describe "$BUILD_ID" \
+              --project "$PROJECT_ID" \
+              --format='value(status)')"
+
+            echo "Cloud Build status: $STATUS"
+            case "$STATUS" in
+              SUCCESS)
+                break
+                ;;
+              FAILURE|INTERNAL_ERROR|TIMEOUT|CANCELLED|EXPIRED)
+                exit 1
+                ;;
+            esac
+
+            sleep 5
+          done
+
+          test "$STATUS" = "SUCCESS"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Deploy scamper-mcp-server to Cloud Run
+        run: |
+          MCP_STATUS_URL="$(gcloud run services describe "$MCP_SERVICE" \
+            --region "$REGION" \
+            --project "$PROJECT_ID" \
+            --format='value(status.url)' 2>/dev/null || true)"
+          MCP_STATUS_HOST="${MCP_STATUS_URL#https://}"
+          export MCP_STATUS_HOST
+
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          allowed_hosts = [
+              "localhost",
+              "localhost:*",
+              "127.0.0.1",
+              "127.0.0.1:*",
+              f"{os.environ['MCP_SERVICE']}-{os.environ['PROJECT_NUMBER']}.{os.environ['REGION']}.run.app",
+          ]
+          if os.environ.get("MCP_STATUS_HOST"):
+              allowed_hosts.append(os.environ["MCP_STATUS_HOST"])
+
+          values = {
+              "MCP_HOST": "0.0.0.0",
+              "MCP_PORT": "8080",
+              "MCP_ALLOWED_HOSTS": ",".join(dict.fromkeys(allowed_hosts)),
+              "GOOGLE_CLOUD_PROJECT": os.environ["PROJECT_ID"],
+              "GIT_SHA": os.environ["GITHUB_SHA"],
+              "LOG_LEVEL": "INFO",
+          }
+
+          Path("/tmp/scamper-mcp-env.yaml").write_text(
+              "\n".join(f"{key}: {json.dumps(value)}" for key, value in values.items()) + "\n"
+          )
+          PY
+
+          gcloud run deploy "$MCP_SERVICE" \
+            --image "$IMAGE" \
+            --region "$REGION" \
+            --project "$PROJECT_ID" \
+            --allow-unauthenticated \
+            --env-vars-file /tmp/scamper-mcp-env.yaml \
+            --quiet

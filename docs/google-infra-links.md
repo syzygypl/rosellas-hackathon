@@ -19,6 +19,7 @@ Stan na: 2026-07-04
 | `crud-frontend` | https://crud-frontend-sjd2cgjmta-ew.a.run.app | https://console.cloud.google.com/run/detail/europe-west1/crud-frontend/metrics?project=crud-hackathon-ml-20260703 | `crud-frontend-00002-cp7` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-source-deploy/crud-frontend@sha256:bc4325205fe0d257e690d59b864d12f5457770ccdd932dde1d75b3bcb6671d7c` |
 | `general-ai-agent` | https://general-ai-agent-59918194944.europe-west1.run.app | https://console.cloud.google.com/run/detail/europe-west1/general-ai-agent/metrics?project=crud-hackathon-ml-20260703 | `general-ai-agent-00007-rkx` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/general-ai-agent:ab337fe7a19f140df24ee8849f466d7ae78c9898` |
 | `triz-mcp-server` | https://triz-mcp-server-59918194944.europe-west1.run.app | https://console.cloud.google.com/run/detail/europe-west1/triz-mcp-server/metrics?project=crud-hackathon-ml-20260703 | `triz-mcp-server-00003-vxr` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/triz-mcp-server:ab337fe7a19f140df24ee8849f466d7ae78c9898` |
+| `scamper-mcp-server` | https://scamper-mcp-server-59918194944.europe-west1.run.app (po pierwszym deployu) | https://console.cloud.google.com/run/detail/europe-west1/scamper-mcp-server/metrics?project=crud-hackathon-ml-20260703 | — (jeszcze nie wdrożona) | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/scamper-mcp-server` |
 
 Przydatne endpointy:
 
@@ -32,6 +33,7 @@ Przydatne endpointy:
 | AI Agent health | https://general-ai-agent-59918194944.europe-west1.run.app/api/health |
 | AI Agent solve | https://general-ai-agent-59918194944.europe-west1.run.app/api/solve |
 | TRIZ MCP | https://triz-mcp-server-59918194944.europe-west1.run.app/mcp |
+| SCAMPER MCP | https://scamper-mcp-server-59918194944.europe-west1.run.app/mcp (po pierwszym deployu) |
 
 Uwaga: przykładowe usługi CRUD działają jeszcze na obrazach z repozytorium `cloud-run-source-deploy`. Nowe workflowy w tym repo budują i deployują obrazy z `cloud-run-apps`.
 
@@ -51,6 +53,7 @@ Docelowe obrazy używane przez workflowy:
 | `general-ai-agent` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/general-ai-agent` |
 | `customer-portal` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/customer-portal` |
 | `triz-mcp-server` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/triz-mcp-server` |
+| `scamper-mcp-server` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/scamper-mcp-server` |
 | `research-landing` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/research-landing` |
 
 Zweryfikowane smoke buildy z obecnego repo:
@@ -142,6 +145,7 @@ Te linki nie są częścią GCP, ale są punktem wejścia do deployu tej infrast
 | `general-ai-agent` | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/general-ai-agent.yml |
 | `customer-portal` | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/customer-portal.yml |
 | `triz-mcp-server` | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/triz-mcp-server.yml |
+| `scamper-mcp-server` | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/scamper-mcp-server.yml |
 | `research-landing` | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/research-landing.yml |
 
 Ustawione GitHub Actions variables:

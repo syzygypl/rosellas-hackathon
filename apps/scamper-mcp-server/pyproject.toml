@@ -1,0 +1,19 @@
+[project]
+name = "scamper-mcp-server"
+version = "0.1.0"
+description = "SCAMPER ideation tools exposed over the Model Context Protocol"
+readme = "README.md"
+requires-python = ">=3.13, <3.14"
+dependencies = [
+    "mcp[cli]>=1.27.1",
+    "pydantic-settings>=2.14.1",
+    "starlette>=1.3.1",
+    "uvicorn>=0.48.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]

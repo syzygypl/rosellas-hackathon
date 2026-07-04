@@ -78,18 +78,26 @@
         @if (!solutions().length) {
           <p class="muted">
             Tu pojawią się karty rozwiązań: sedno Twojego problemu prostymi słowami
-            i konkretne kierunki rozwiązań oparte na zasadach wynalazczych TRIZ.
+            i konkretne kierunki rozwiązań z metod TRIZ i SCAMPER — z zaznaczeniem,
+            która metoda wygrała dla Twojego problemu.
           </p>
         }
         @for (card of solutions(); track card.id) {
           <article class="card" [id]="'sol-' + card.id" [class.flash]="card.flash">
             <h2>
               #{{ card.id }} {{ card.sol.title }}
+              @if (card.sol.method) {
+                <span class="badge method">{{ card.sol.method }}</span>
+              }
               <span class="badge">{{ engineLabel(card.engine) }}</span>
             </h2>
 
             @if (card.sol.summary) {
               <p class="summary">{{ card.sol.summary }}</p>
+            }
+
+            @if (card.sol.methodRationale) {
+              <p class="method-rationale">🏆 {{ card.sol.methodRationale }}</p>
             }
 
             @if (card.sol.contradiction) {
@@ -129,7 +137,7 @@
             }
 
             <details class="tech" [open]="!card.sol.directions?.length">
-              <summary>🔬 Szczegóły techniczne (TRIZ)</summary>
+              <summary>🔬 Szczegóły techniczne (TRIZ / SCAMPER)</summary>
 
               <details [open]="!card.reportHtml">
                 <summary>🔎 Parametry TRIZ ({{ card.sol.parameters.length }})</summary>
@@ -150,7 +158,7 @@
               </details>
 
               <details>
-                <summary>🧭 Powiązane zasady / dodatkowe kierunki</summary>
+                <summary>🧭 Powiązane zasady / kierunki SCAMPER</summary>
                 <pre>{{ card.sol.related || '—' }}</pre>
               </details>
 

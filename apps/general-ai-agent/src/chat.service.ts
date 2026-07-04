@@ -22,6 +22,10 @@ const MAX_MESSAGE_CHARS = 8000;
 /** Structured payload for the side "solutions" panel in the UI. */
 export interface ChatSolution {
   title: string;
+  /** Method that produced the winning directions: "TRIZ", "SCAMPER" or "TRIZ + SCAMPER". */
+  method?: string;
+  /** One sentence explaining why that method fit the problem best (agent path only). */
+  methodRationale?: string;
   /** 1-2 plain sentences about the problem, in the conversation language (agent path only). */
   summary?: string;
   /** Humanized solution directions written by the LLM (agent path only). */
@@ -84,7 +88,7 @@ export class ChatService {
         const lastUser = [...messages].reverse().find((m) => m.role === 'user');
         if (!lastUser) {
           return {
-            answer: 'Opisz swój problem techniczny, a poszukam rozwiązań TRIZ.',
+            answer: 'Opisz swój problem, a poszukam rozwiązań metodami TRIZ i SCAMPER.',
             engine: 'pipeline',
             solution: null,
           };
@@ -174,6 +178,8 @@ export class ChatService {
       solution.contradiction = card.contradiction || solution.contradiction;
       solution.directions = card.directions.length ? card.directions : undefined;
       solution.nextSteps = card.nextSteps.length ? card.nextSteps : undefined;
+      solution.method = card.method || undefined;
+      solution.methodRationale = card.methodRationale || undefined;
     }
 
     const suggestions = needsSummary ? await this.quickReplies(chatAnswer) : earlySuggestions;
@@ -273,6 +279,7 @@ export class ChatService {
       engine: 'pipeline',
       solution: {
         title: lastUser.content.length > 80 ? lastUser.content.slice(0, 77) + '…' : lastUser.content,
+        method: 'TRIZ',
         parameters: r.detectedParameters,
         contradiction: r.contradiction,
         principles: r.principlesFromMatrix,

@@ -21,6 +21,10 @@ export interface SolutionDirection {
 /** Structured payload for the solutions side panel. */
 export interface ChatSolution {
   title: string;
+  /** Method that produced the winning directions: "TRIZ", "SCAMPER" or "TRIZ + SCAMPER". */
+  method?: string;
+  /** One sentence explaining why that method fit the problem best (agent path only). */
+  methodRationale?: string;
   /** 1-2 plain sentences about the problem, in the conversation language (agent path only). */
   summary?: string;
   /** Humanized solution directions written by the LLM (agent path only). */

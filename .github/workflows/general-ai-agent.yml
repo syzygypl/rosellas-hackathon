@@ -24,6 +24,7 @@ env:
   FRONTEND_SERVICE: customer-portal
   IMAGE_NAME: general-ai-agent
   MCP_SERVICE: triz-mcp-server
+  SCAMPER_MCP_SERVICE: scamper-mcp-server
   PROJECT_NUMBER: ${{ vars.GCP_PROJECT_NUMBER || '59918194944' }}
   REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
@@ -125,7 +126,25 @@ jobs:
             MCP_URL="${REGIONAL_MCP_URL%/}/mcp"
           fi
 
-          ENV_VARS="^@^MCP_URL=$MCP_URL@GOOGLE_CLOUD_PROJECT=$PROJECT_ID@APP_VERSION=$APP_VERSION@GIT_SHA=$GITHUB_SHA@BUILD_TIME=$BUILD_TIME@LOG_LEVEL=INFO"
+          SCAMPER_MCP_URL="${{ vars.SCAMPER_MCP_URL }}"
+          if [ -n "$SCAMPER_MCP_URL" ]; then
+            echo "Using SCAMPER_MCP_URL from repository variables."
+          else
+            REGIONAL_SCAMPER_MCP_URL="https://$SCAMPER_MCP_SERVICE-$PROJECT_NUMBER.$REGION.run.app"
+            if SCAMPER_MCP_SERVICE_URL="$(gcloud run services describe "$SCAMPER_MCP_SERVICE" \
+                --region "$REGION" \
+                --project "$PROJECT_ID" \
+                --format='value(status.url)' 2>/dev/null)"; then
+              echo "Resolved SCAMPER MCP service URL: $SCAMPER_MCP_SERVICE_URL"
+              echo "Using regional SCAMPER MCP URL: $REGIONAL_SCAMPER_MCP_URL"
+            else
+              echo "SCAMPER MCP service not found yet; using regional URL: $REGIONAL_SCAMPER_MCP_URL"
+            fi
+
+            SCAMPER_MCP_URL="${REGIONAL_SCAMPER_MCP_URL%/}/mcp"
+          fi
+
+          ENV_VARS="^@^MCP_URL=$MCP_URL@SCAMPER_MCP_URL=$SCAMPER_MCP_URL@GOOGLE_CLOUD_PROJECT=$PROJECT_ID@APP_VERSION=$APP_VERSION@GIT_SHA=$GITHUB_SHA@BUILD_TIME=$BUILD_TIME@LOG_LEVEL=INFO"
           REGIONAL_FRONTEND_URL="https://$FRONTEND_SERVICE-$PROJECT_NUMBER.$REGION.run.app"
 
           if FRONTEND_URL="$(gcloud run services describe "$FRONTEND_SERVICE" \
