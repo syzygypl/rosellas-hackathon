@@ -12,6 +12,7 @@ Use this document to load the Rosellas Hackathon project context before changing
 - Main backend: NestJS 10 API from `apps/general-ai-agent/`, globally prefixed with `/api`.
 - TRIZ MCP server: Python FastMCP service from `apps/triz-mcp-server/`, exposed over Streamable HTTP at `/mcp` and using an external OpenAI-compatible embeddings API.
 - Figma generator: Nx project wrapper from `apps/figma-generator/` for validating and building the local Figma design system plugin.
+- Design system showcase: static Angular app from `apps/design-system-showcase/` for browser presentation of repository-owned Idealab foundations, components, patterns, and example screens; deployed as Cloud Run service `design-system-showcase` and mapped to `desing.idealab.expert`.
 - SCAMPER MCP server: Python FastMCP service from `apps/scamper-mcp-server/`, exposed over Streamable HTTP at `/mcp`; serves a static SCAMPER lens knowledge base, no embeddings API needed. The Deep Agent runs both TRIZ and SCAMPER and picks the best solution.
 - Eval CLI: root `eval/` subsystem runs local SDG scenarios against the AI agent `/api/chat` surface, records/scores Langfuse experiments when configured, and can push inactive hosted evaluator definitions.
 - Example frontend: Angular 19 standalone SPA served by nginx from `apps/examples/frontend/`.
@@ -27,7 +28,7 @@ Use this document to load the Rosellas Hackathon project context before changing
 2. Check the worktree with `git status --short` and preserve user changes.
 3. For current deployed URLs, Cloud Run revisions, GCP console links, and GitHub Actions links, read `docs/google-infra-links.md`.
 4. For local build and deploy setup, read `README.md`.
-5. Inspect only the subsystem needed for the task: `apps/examples/frontend/`, `apps/examples/backend/`, `apps/figma-generator/`, `.github/workflows/`, or `docs/`.
+5. Inspect only the subsystem needed for the task: `apps/examples/frontend/`, `apps/examples/backend/`, `apps/figma-generator/`, `apps/design-system-showcase/`, `.github/workflows/`, or `docs/`.
 
 ## Key Paths
 
@@ -45,6 +46,7 @@ Use this document to load the Rosellas Hackathon project context before changing
 | TRIZ MCP app | `apps/triz-mcp-server/` | Python FastMCP server with TRIZ tools, Dockerfile, uv lockfile, and Nx build/serve targets. |
 | TRIZ MCP config | `apps/triz-mcp-server/app/core/config.py` | Reads MCP bind settings and external embeddings provider settings. |
 | Figma generator | `apps/figma-generator/` | Nx project wrapper for `design-system/` and `tools/design-system/` validation and plugin build. |
+| Design system showcase | `apps/design-system-showcase/` | Static Angular app that presents the Idealab token, component, pattern, and example screen set in a browser; packaged by Docker/nginx for Cloud Run. |
 | SCAMPER MCP app | `apps/scamper-mcp-server/` | Python FastMCP server with SCAMPER lens tools, Dockerfile, uv lockfile, and Nx build/serve targets. |
 | SCAMPER MCP data | `apps/scamper-mcp-server/app/services/scamper.py` | Static dataset of the seven SCAMPER lenses (questions, examples). |
 | Eval CLI | `eval/` | Local eval suite. `eval/scenarios/` contains scenario JSON, `eval/evaluators/` contains inspectable evaluator definitions, and `eval/framework/` contains CLI/runtime code. |
@@ -73,6 +75,7 @@ Run locally:
 npm run start:backend
 npm run start:frontend
 npm run start:landing
+npm run start:design-system-showcase
 npm run start:mcp
 npm run start:scamper
 ```
@@ -93,6 +96,7 @@ npm run build
 npm run build:backend
 npm run build:frontend
 npm run build:landing
+npm run build:design-system-showcase
 npm run build:mcp
 npm run build:scamper
 npm run build:figma-generator
@@ -107,7 +111,7 @@ npm test
 ```
 
 Type-checking happens in the app builds, not in Jest. Use builds plus `npm test` as the baseline verification.
-For design system changes, use `npm run design-system:validate` and `npm run design-system:figma:plugin:build`.
+For design system metadata changes, use `npm run design-system:validate` and `npm run design-system:figma:plugin:build`. For the static browser showcase, use `npm run build:design-system-showcase`.
 
 ## Runtime Configuration
 
@@ -220,6 +224,7 @@ GitHub Actions workflows:
 - `general-ai-agent.yml`: builds `apps/general-ai-agent` through Nx, packages the prebuilt artifact with Docker, pushes `general-ai-agent`, sets `MCP_URL`/`SCAMPER_MCP_URL` to the regional `triz-mcp-server`/`scamper-mcp-server` Cloud Run URLs when not configured manually, resolves an OpenAI-compatible key from `OPENAI_API_KEY`, `EMBEDDING_API_KEY`, or legacy `OPEN_AI_API_KEY`, and deploys Cloud Run.
 - `customer-portal.yml`: resolves `general-ai-agent`, builds `apps/customer-portal` through Nx, packages the prebuilt artifact with Docker, pushes `customer-portal`, and deploys Cloud Run.
 - `research-landing.yml`: resolves `customer-portal`, builds `apps/landing-page` through Nx, packages the prebuilt static artifact with Docker, pushes `research-landing`, and deploys Cloud Run.
+- `design-system-showcase.yml`: builds `apps/design-system-showcase` through Nx, packages the prebuilt static artifact with Docker, pushes `design-system-showcase`, deploys Cloud Run, and ensures the `desing.idealab.expert` custom domain mapping.
 - `triz-mcp-server.yml`: builds `apps/triz-mcp-server` through Nx, packages the Python app with Docker, pushes `triz-mcp-server`, sets external embeddings env vars and MCP allowed hosts, and deploys Cloud Run.
 - `scamper-mcp-server.yml`: compile-checks `apps/scamper-mcp-server`, packages the Python app with Docker, pushes `scamper-mcp-server`, sets MCP allowed hosts, and deploys Cloud Run (no embeddings configuration).
 - `design-system.yml`: validates `apps/figma-generator/`, `design-system/`, and `tools/design-system/`, then builds the free local Figma plugin artifact.

@@ -1,0 +1,194 @@
+<header class="app-header">
+  <div class="header-shell">
+    <a class="brand" href="#overview" aria-label="Rosellas Idealab design system overview">
+      <img src="assets/idealab-mark.svg" alt="" aria-hidden="true">
+      <span>Rosellas Idealab</span>
+    </a>
+
+    <nav class="nav-links" aria-label="Design system sections">
+      <a href="#foundations">Foundations</a>
+      <a href="#components">Components</a>
+      <a href="#patterns">Patterns</a>
+    </nav>
+
+    <span class="version-pill">Design System {{ versionLabel }}</span>
+  </div>
+</header>
+
+<main id="overview">
+  <section class="hero-section" aria-labelledby="page-title">
+    <div class="hero-copy">
+      <p class="eyebrow">
+        <span aria-hidden="true"></span>
+        Repository UI Kit
+      </p>
+      <h1 id="page-title">Rosellas Idealab Design System</h1>
+      <p class="hero-text">
+        Foundations, components, patterns, and example screens used by the Rosellas research platform.
+      </p>
+
+      <div class="hero-actions" aria-label="Primary showcase anchors">
+        <a class="primary-action" href="#components">
+          <span aria-hidden="true">-></span>
+          Components
+        </a>
+        <a class="secondary-action" href="#foundations">View Tokens</a>
+      </div>
+    </div>
+
+    <aside class="system-card" aria-label="Design system summary">
+      <img src="assets/research-chip.svg" alt="" aria-hidden="true">
+      <div>
+        <p>Figma source</p>
+        <h2>Rosellas Idealab UI Kit</h2>
+        <span>0.1.0</span>
+      </div>
+    </aside>
+  </section>
+
+  <section class="section-band" id="foundations" aria-labelledby="foundations-title">
+    <div class="section-shell">
+      <div class="section-heading">
+        <p>Foundations</p>
+        <h2 id="foundations-title">Tokens that shape the interface</h2>
+      </div>
+
+      <div class="foundation-grid">
+        <article class="color-panel" aria-labelledby="color-title">
+          <div class="panel-heading">
+            <h3 id="color-title">Color</h3>
+            <span>{{ colorTokens.length }} tokens shown</span>
+          </div>
+
+          <div class="color-grid">
+            @for (token of colorTokens; track token.name) {
+              <div class="color-token">
+                <span class="swatch" [style.background]="token.value" aria-hidden="true"></span>
+                <div>
+                  <p>{{ token.name }}</p>
+                  <strong>{{ token.value }}</strong>
+                  <span>{{ token.description }}</span>
+                </div>
+              </div>
+            }
+          </div>
+        </article>
+
+        <article class="type-panel" aria-labelledby="type-title">
+          <div class="panel-heading">
+            <h3 id="type-title">Typography</h3>
+            <span>Text styles</span>
+          </div>
+
+          <div class="type-list">
+            @for (style of typeStyles; track style.name) {
+              <div class="type-row">
+                <p>{{ style.name }}</p>
+                <span>{{ style.family }} / {{ style.size }} / {{ style.lineHeight }}</span>
+              </div>
+            }
+          </div>
+        </article>
+      </div>
+
+      <article class="spacing-panel" aria-labelledby="spacing-title">
+        <div class="panel-heading">
+          <h3 id="spacing-title">Spacing Scale</h3>
+          <span>4px to 96px</span>
+        </div>
+
+        <div class="spacing-row">
+          @for (space of spacingTokens; track space) {
+            <div class="space-token">
+              <span [style.width.px]="space" aria-hidden="true"></span>
+              <p>{{ space }}</p>
+            </div>
+          }
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="section-shell components-section" id="components" aria-labelledby="components-title">
+    <div class="section-heading">
+      <p>Components</p>
+      <h2 id="components-title">Reusable building blocks</h2>
+    </div>
+
+    <div class="component-layout">
+      <div class="component-preview" aria-label="Component preview">
+        <div class="mock-header">
+          <span class="mock-logo" aria-hidden="true"></span>
+          <span>Research Workspace</span>
+          <button type="button">Open</button>
+        </div>
+
+        <div class="mock-hero">
+          <span class="status-badge">
+            <span aria-hidden="true"></span>
+            AI Laboratory Active
+          </span>
+          <h3>Solving Global Challenges</h3>
+          <p>Signal-rich interface primitives for environmental research workflows.</p>
+        </div>
+
+        <div class="track-preview-grid">
+          <article>
+            <span class="track-icon green" aria-hidden="true"></span>
+            <p>Track I</p>
+            <h4>E-waste Intelligence</h4>
+          </article>
+          <article>
+            <span class="track-icon blue" aria-hidden="true"></span>
+            <p>Track II</p>
+            <h4>Wastewater Systems</h4>
+          </article>
+        </div>
+      </div>
+
+      <div class="component-list">
+        @for (component of components; track component.name) {
+          <article class="component-card">
+            <div>
+              <h3>{{ component.name }}</h3>
+              <p>{{ component.usage }}</p>
+            </div>
+            <ul [attr.aria-label]="component.name + ' variants'">
+              @for (variant of component.variants; track variant) {
+                <li>{{ variant }}</li>
+              }
+            </ul>
+          </article>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="section-band" id="patterns" aria-labelledby="patterns-title">
+    <div class="section-shell">
+      <div class="section-heading">
+        <p>Patterns</p>
+        <h2 id="patterns-title">Composition recipes and example screens</h2>
+      </div>
+
+      <div class="pattern-grid">
+        @for (pattern of patterns; track pattern.name) {
+          <article class="pattern-card">
+            <h3>{{ pattern.name }}</h3>
+            <ul [attr.aria-label]="pattern.name + ' includes'">
+              @for (item of pattern.includes; track item) {
+                <li>{{ item }}</li>
+              }
+            </ul>
+          </article>
+        }
+      </div>
+
+      <div class="screen-strip" aria-label="Example screens">
+        @for (screen of exampleScreens; track screen) {
+          <span>{{ screen }}</span>
+        }
+      </div>
+    </div>
+  </section>
+</main>
