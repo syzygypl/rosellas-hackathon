@@ -54,6 +54,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.PROJECT_ID }}
+          install_components: beta
 
       - name: Set Cloud Run defaults
         run: |
@@ -121,6 +122,8 @@ jobs:
         run: |
           if MAPPED_SERVICE="$(gcloud beta run domain-mappings describe \
               --domain "$CUSTOM_DOMAIN" \
+              --region "$REGION" \
+              --project "$PROJECT_ID" \
               --format='value(spec.routeName)' 2>/dev/null)"; then
             echo "Domain mapping exists: $CUSTOM_DOMAIN -> ${MAPPED_SERVICE:-unknown}"
             if [ -n "$MAPPED_SERVICE" ] && [ "$MAPPED_SERVICE" != "$SHOWCASE_SERVICE" ]; then
@@ -131,9 +134,13 @@ jobs:
             gcloud beta run domain-mappings create \
               --service "$SHOWCASE_SERVICE" \
               --domain "$CUSTOM_DOMAIN" \
+              --region "$REGION" \
+              --project "$PROJECT_ID" \
               --quiet
           fi
 
           gcloud beta run domain-mappings describe \
             --domain "$CUSTOM_DOMAIN" \
+            --region "$REGION" \
+            --project "$PROJECT_ID" \
             --format='yaml(status.conditions,status.resourceRecords)'
