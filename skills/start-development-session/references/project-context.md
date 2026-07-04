@@ -104,6 +104,9 @@ TRIZ MCP environment:
 - `MCP_HOST`: defaults to `0.0.0.0`.
 - `MCP_PORT`: defaults to `8123`; the Docker image sets this to `8080`.
 - `PORT`: optional Cloud Run bind port override; when present it takes precedence over `MCP_PORT`.
+- `MCP_ALLOWED_HOSTS`: comma-separated Host headers accepted by MCP DNS rebinding protection. Cloud Run deploy sets this to the deployed regional service host plus local hosts.
+- `MCP_ALLOWED_ORIGINS`: comma-separated Origin headers accepted by MCP DNS rebinding protection when an Origin header is present.
+- `MCP_DNS_REBINDING_PROTECTION`: defaults to `true`.
 - `EMBEDDING_SERVICE_URL`: external OpenAI-compatible embeddings API base URL. Current deployed default is `https://api.openai.com/v1`.
 - `EMBEDDING_MODEL`: embeddings model name. Current deployed default is `text-embedding-3-small`.
 - `EMBEDDING_API_KEY`: required for semantic TRIZ tools in deploy. `OPENAI_API_KEY` and local legacy `OPEN_AI_API_KEY` are accepted as fallbacks.
@@ -153,6 +156,7 @@ Workflow files and workflow `name` values should match the Cloud Run service the
 Required GitHub Actions variables:
 
 - `GCP_PROJECT_ID`
+- `GCP_PROJECT_NUMBER`
 - `GCP_REGION`
 - `WIF_PROVIDER`
 - `GCP_SERVICE_ACCOUNT`

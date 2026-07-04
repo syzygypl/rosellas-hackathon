@@ -24,6 +24,9 @@ http://localhost:8123/mcp
 |-----|---------------|-------------------|---------|
 | `MCP_HOST` | `0.0.0.0` | `0.0.0.0` | bind address |
 | `MCP_PORT` | `8123` | `8080` | HTTP port |
+| `MCP_ALLOWED_HOSTS` | local hosts | Cloud Run service host | accepted Host headers for MCP DNS rebinding protection |
+| `MCP_ALLOWED_ORIGINS` | empty | empty | accepted Origin headers when present |
+| `MCP_DNS_REBINDING_PROTECTION` | `true` | `true` | enables MCP transport Host/Origin validation |
 | `EMBEDDING_MODEL` | `text-embedding-3-small` | `text-embedding-3-small` | OpenAI-compatible embedding model |
 | `EMBEDDING_SERVICE_URL` | `https://api.openai.com/v1` | `https://api.openai.com/v1` | OpenAI-compatible `/v1` base URL |
 | `EMBEDDING_API_KEY` | required | GitHub secret | API key/token for the embeddings endpoint |

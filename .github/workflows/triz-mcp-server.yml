@@ -22,6 +22,7 @@ env:
   IMAGE_NAME: triz-mcp-server
   MCP_SERVICE: triz-mcp-server
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  PROJECT_NUMBER: ${{ vars.GCP_PROJECT_NUMBER }}
   REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
 
 jobs:
@@ -39,6 +40,7 @@ jobs:
           EMBEDDING_SERVICE_URL: ${{ vars.EMBEDDING_SERVICE_URL || 'https://api.openai.com/v1' }}
         run: |
           test -n "$PROJECT_ID"
+          test -n "$PROJECT_NUMBER"
           test -n "${{ vars.WIF_PROVIDER }}"
           test -n "${{ vars.GCP_SERVICE_ACCOUNT }}"
           test -n "$EMBEDDING_SERVICE_URL"
@@ -107,6 +109,15 @@ jobs:
           values = {
               "MCP_HOST": "0.0.0.0",
               "MCP_PORT": "8080",
+              "MCP_ALLOWED_HOSTS": ",".join(
+                  [
+                      "localhost",
+                      "localhost:*",
+                      "127.0.0.1",
+                      "127.0.0.1:*",
+                      f"{os.environ['MCP_SERVICE']}-{os.environ['PROJECT_NUMBER']}.{os.environ['REGION']}.run.app",
+                  ]
+              ),
               "EMBEDDING_MODEL": os.environ["EMBEDDING_MODEL"],
               "EMBEDDING_SERVICE_URL": os.environ["EMBEDDING_SERVICE_URL"],
               "EMBEDDING_API_KEY": os.environ["EMBEDDING_API_KEY"],

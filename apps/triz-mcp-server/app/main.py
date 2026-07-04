@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 import uvicorn
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from pytriz import TRIZStore
 from starlette.middleware.cors import CORSMiddleware
 
@@ -31,6 +32,11 @@ mcp = FastMCP(
     lifespan=lifespan,
     stateless_http=True,
     json_response=True,
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=config.MCP_DNS_REBINDING_PROTECTION,
+        allowed_hosts=config.allowed_hosts,
+        allowed_origins=config.allowed_origins,
+    ),
 )
 
 # ---------------------------------------------------------------------------
