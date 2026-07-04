@@ -1,8 +1,11 @@
 # 🧩 Inventive Problem Solver — MVP
 
-NestJS backend + a single-page frontend that turns a **technical contradiction**
-into concrete **TRIZ inventive principles**, powered by the workshop's TRIZ MCP
-server (embedding-backed semantic search + contradiction matrix).
+NestJS backend + a single-page **chat** frontend that turns a **technical
+contradiction** into concrete **TRIZ inventive principles**, powered by the
+workshop's TRIZ MCP server (embedding-backed semantic search + contradiction
+matrix). The UI is an interactive conversation on the left, with every solution
+(parameters, contradiction, principles, reasoning trail) accumulating as cards
+in a side panel on the right.
 
 Implements the core of the Event Storming flow from the Miro board:
 `Problem Submitted → Technical Contradiction Built → TRIZ Parameters Mapped →
@@ -21,22 +24,28 @@ npm install
 npm start              # http://localhost:3000
 ```
 
-Open http://localhost:3000, fill in:
-- **Problem** — free-text situation
-- **Co chcemy poprawić?** — what to improve
-- **Co się przez to pogarsza?** — what gets worse
-
-You get: mapped TRIZ parameters (+ alternatives), inventive principles from the
-contradiction matrix, related principles as extra idea directions, and a
-reasoning trail.
+Open http://localhost:3000 and just **chat**: describe the problem, then refine
+or ask follow-ups. Each solved run lands as a card in the **solutions panel**
+on the right (detected TRIZ parameters, technical contradiction, inventive
+principles from the matrix, related directions, reasoning trail); follow-up
+questions are answered in the chat without adding new cards.
 
 ## How it works
 
-1. `search_parameter` (semantic, via embeddings) maps free text → TRIZ engineering parameters.
-2. `browse_contradiction_matrix` looks up inventive principles for the improving/preserving pair.
-3. `search_principle` adds related principles as extra candidate directions.
+The chat endpoint (`POST /api/chat`, full message history in the body) picks
+one of two engines per turn:
 
-All TRIZ logic runs on the MCP server — **no external LLM is required**.
+- **agent** (when `OPENAI_API_KEY` is set) — the LangChain Deep Agent runs the
+  conversation with the whole history and calls TRIZ MCP tools as needed; its
+  tool calls are distilled into the side-panel card.
+- **pipeline** (fallback, LLM-free) — every user turn is treated as a (refined)
+  problem statement and routed through the deterministic pipeline:
+  1. `search_parameter` (semantic, via embeddings) maps free text → TRIZ engineering parameters.
+  2. `browse_contradiction_matrix` looks up inventive principles for the improving/preserving pair.
+  3. `search_principle` adds related principles as extra candidate directions.
+
+All TRIZ logic runs on the MCP server — with no OpenAI key the app still works,
+**no external LLM is required**.
 
 ## Config (`.env`)
 
@@ -62,8 +71,9 @@ src/
   triz-mcp.service.ts   JSON-RPC client for the TRIZ MCP server
   solver.service.ts     pipeline orchestration (the board's event flow)
   agent.service.ts      LangChain Deep Agent over the same MCP server
-  solver.controller.ts  GET / (UI), GET /health, POST /api/solve, POST /api/agent/solve
-public/index.html       the whole frontend
+  chat.service.ts       interactive chat orchestration (agent or pipeline per turn)
+  solver.controller.ts  GET / (UI), GET /health, POST /api/solve, /api/agent/solve, /api/chat
+public/index.html       the whole frontend (chat + solutions side panel)
 ```
 
 ## Deep Agent endpoint

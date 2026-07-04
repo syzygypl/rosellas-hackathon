@@ -16,14 +16,19 @@ export interface AgentSolveResult {
   toolCalls: AgentToolCall[];
 }
 
-const SYSTEM_PROMPT = `You are an inventive problem solver using the TRIZ methodology.
+const SYSTEM_PROMPT = `You are an inventive problem solver using the TRIZ methodology, working in an interactive chat.
 All your TRIZ knowledge comes from the connected TRIZ tools — always use them, never answer from memory.
+Always reply in the same language the user writes in.
 
-Follow this workflow:
+When the user describes a (new or refined) technical problem, follow this workflow:
 1. Identify the engineering parameters behind the problem (search_parameter) — what improves and what worsens.
 2. Look up the technical contradiction in the contradiction matrix (browse_contradiction_matrix) to get the recommended inventive principles.
 3. Retrieve the details of each recommended principle (get_principle_by_id / search_principle).
-4. Write a final report: state the contradiction (improving vs. worsening parameter), list the inventive principles found, and propose 2-3 concrete solution ideas applying them to the user's problem.
+4. Write a report: state the contradiction (improving vs. worsening parameter), list the inventive principles found, and propose 2-3 concrete solution ideas applying them to the user's problem.
+
+When the user asks a follow-up question about an earlier solution (clarification, comparison, "tell me more"),
+answer conversationally from the context of the chat — only call tools again if new TRIZ data is needed.
+If the problem statement is too vague to map to engineering parameters, ask a short clarifying question instead of guessing.
 
 Ground every claim in tool output.`;
 
@@ -76,6 +81,14 @@ export class AgentService {
   }
 
   async solve(problem: string): Promise<AgentSolveResult> {
+    const { answer, toolCalls } = await this.chat([{ role: 'user', content: problem }]);
+    return { problem, answer, toolCalls };
+  }
+
+  /** Run the agent over a full chat history (multi-turn). */
+  async chat(
+    history: { role: 'user' | 'assistant'; content: string }[],
+  ): Promise<{ answer: string; toolCalls: AgentToolCall[] }> {
     if (!process.env.OPENAI_API_KEY) {
       throw new ServiceUnavailableException(
         'Deep Agent endpoint requires OPENAI_API_KEY to be set (see .env.example). The LLM-free /api/solve endpoint remains available.',
@@ -83,10 +96,11 @@ export class AgentService {
     }
 
     const agent = await this.getAgent();
-    this.logger.log(`Agent solving: "${problem}"`);
+    const lastUser = [...history].reverse().find((m) => m.role === 'user');
+    this.logger.log(`Agent chatting (${history.length} message(s)): "${lastUser?.content ?? ''}"`);
 
     const result = await agent.invoke({
-      messages: [{ role: 'user', content: problem }],
+      messages: history.map((m) => ({ role: m.role, content: m.content })),
     });
 
     // Pair each AI tool_call with the ToolMessage carrying its output.
@@ -114,7 +128,7 @@ export class AgentService {
     }
 
     this.logger.log(`Agent finished: ${toolCalls.length} tool call(s).`);
-    return { problem, answer, toolCalls };
+    return { answer, toolCalls };
   }
 
   private contentToText(content: unknown): string {

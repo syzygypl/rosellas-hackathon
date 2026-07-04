@@ -3,9 +3,10 @@ import { SolverController } from './solver.controller';
 import { SolverService } from './solver.service';
 import { TrizMcpService } from './triz-mcp.service';
 import { AgentService } from './agent.service';
+import { ChatService } from './chat.service';
 
 @Module({
   controllers: [SolverController],
-  providers: [SolverService, TrizMcpService, AgentService],
+  providers: [SolverService, TrizMcpService, AgentService, ChatService],
 })
 export class AppModule {}
