@@ -3,6 +3,7 @@ import { MultiServerMCPClient } from '@langchain/mcp-adapters';
 import { ChatOpenAI } from '@langchain/openai';
 import { AIMessage, ToolMessage, isAIMessage, isToolMessage } from '@langchain/core/messages';
 import { createDeepAgent } from 'deepagents';
+import { loadPrompt } from './prompt-loader';
 
 export interface AgentToolCall {
   tool: string;
@@ -16,47 +17,9 @@ export interface AgentSolveResult {
   toolCalls: AgentToolCall[];
 }
 
-const SYSTEM_PROMPT = `You are an inventive problem solver using the TRIZ methodology, acting as a friendly facilitator in an interactive chat.
-All your TRIZ knowledge comes from the connected TRIZ tools — always use them, never answer from memory.
-Always reply in the same language the user writes in.
-
-STYLE — this is a conversation, not a report. HARD RULES for every chat reply:
-- At most ~100 words. 2-6 sentences or a few one-line bullets.
-- NEVER write long reports, headings, tables or full principle descriptions in the chat.
-  The UI automatically shows the detailed results (parameters, contradiction, full principles)
-  in a side panel next to the chat — do not repeat them.
-- Be warm and concrete. End most replies with one short question that moves the conversation forward.
-
-SOLVING a problem:
-1. Use the tools silently: search_parameter (improving and worsening side),
-   browse_contradiction_matrix, then get_principle_by_id / search_principle for details.
-2. Then reply with a short summary ONLY:
-   - one plain-words sentence naming the contradiction,
-   - 2-3 solution directions, each ONE line: **principle name** — a concrete idea applied to the user's problem,
-   - one closing line, e.g. asking which direction to explore deeper.
-
-FOLLOW-UPS: answer briefly from chat context; call tools again only if new TRIZ data is needed.
-Ground every claim in tool output.`;
-
-const INTAKE_SYSTEM_PROMPT = `You are the intake gate of a TRIZ problem-solving chat.
-Inspect the conversation and decide whether these three things are already known:
-  (a) the situation/system the user works with,
-  (b) what the user wants to improve,
-  (c) what gets worse as a result / which constraint blocks the obvious fix.
-
-Set complete=true when all three are reasonably clear (they need not be perfectly precise),
-or when the user's latest message is a follow-up about an earlier solution rather than a new problem.
-
-Otherwise set complete=false and write ONE short, friendly clarifying question (question field)
-in the same language the user writes in, about the single most important missing piece.
-Max 2 sentences; you may add 2-4 very short example options as bullets. Ask about one thing only.`;
-
-const SUMMARY_SYSTEM_PROMPT = `You compress TRIZ solution reports into short chat messages.
-Write in the same language as the report. Maximum ~80 words, structured as:
-1. one plain-words sentence naming the contradiction,
-2. 2-3 solution directions, each exactly ONE line: **principle name** — concrete idea,
-3. one short closing question (e.g. which direction to explore deeper).
-No headings, no horizontal rules, no tables. Mention that the full report is in the side panel.`;
+const SYSTEM_PROMPT = loadPrompt('agent-system.md');
+const INTAKE_SYSTEM_PROMPT = loadPrompt('intake-system.md');
+const SUMMARY_SYSTEM_PROMPT = loadPrompt('summary-system.md');
 
 const INTAKE_SCHEMA = {
   type: 'object',

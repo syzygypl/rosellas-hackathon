@@ -6,7 +6,7 @@
   "scripts": {
     "start": "ts-node src/main.ts",
     "dev": "ts-node-dev --respawn --transpile-only src/main.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && mkdir -p dist/prompts && cp src/prompts/*.md dist/prompts/",
     "start:prod": "node dist/main.js"
   },
   "dependencies": {
