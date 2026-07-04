@@ -34,11 +34,15 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Validate configuration
+        env:
+          EMBEDDING_API_KEY: ${{ secrets.EMBEDDING_API_KEY || secrets.OPENAI_API_KEY || secrets.OPEN_AI_API_KEY }}
+          EMBEDDING_SERVICE_URL: ${{ vars.EMBEDDING_SERVICE_URL || 'https://api.openai.com/v1' }}
         run: |
           test -n "$PROJECT_ID"
           test -n "${{ vars.WIF_PROVIDER }}"
           test -n "${{ vars.GCP_SERVICE_ACCOUNT }}"
-          test -n "${{ vars.EMBEDDING_SERVICE_URL }}"
+          test -n "$EMBEDDING_SERVICE_URL"
+          test -n "$EMBEDDING_API_KEY"
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -91,9 +95,9 @@ jobs:
 
       - name: Deploy triz-mcp-server to Cloud Run
         env:
-          EMBEDDING_API_KEY: ${{ secrets.EMBEDDING_API_KEY || vars.EMBEDDING_API_KEY || 'ollama' }}
-          EMBEDDING_MODEL: ${{ vars.EMBEDDING_MODEL || 'embeddinggemma:300m' }}
-          EMBEDDING_SERVICE_URL: ${{ vars.EMBEDDING_SERVICE_URL }}
+          EMBEDDING_API_KEY: ${{ secrets.EMBEDDING_API_KEY || secrets.OPENAI_API_KEY || secrets.OPEN_AI_API_KEY }}
+          EMBEDDING_MODEL: ${{ vars.EMBEDDING_MODEL || 'text-embedding-3-small' }}
+          EMBEDDING_SERVICE_URL: ${{ vars.EMBEDDING_SERVICE_URL || 'https://api.openai.com/v1' }}
         run: |
           python3 - <<'PY'
           import json

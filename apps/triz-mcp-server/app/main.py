@@ -23,7 +23,6 @@ class AppContext:
 async def lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
     setup_logging()
     store = get_store()
-    await store.ensure_index()
     yield AppContext(config=config, store=store)
 
 
@@ -54,4 +53,4 @@ if __name__ == "__main__":
         allow_headers=["*"],
         expose_headers=["Mcp-Session-Id"],
     )
-    uvicorn.run(app, host=config.MCP_HOST, port=config.MCP_PORT)
+    uvicorn.run(app, host=config.MCP_HOST, port=config.bind_port)

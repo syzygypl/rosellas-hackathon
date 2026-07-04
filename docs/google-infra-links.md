@@ -138,8 +138,9 @@ Ustawione GitHub Actions variables:
 - `GCP_REGION=europe-west1`
 - `WIF_PROVIDER=projects/59918194944/locations/global/workloadIdentityPools/github/providers/github`
 - `GCP_SERVICE_ACCOUNT=github-deployer@crud-hackathon-ml-20260703.iam.gserviceaccount.com`
+- `EMBEDDING_SERVICE_URL=https://api.openai.com/v1`
+- `EMBEDDING_MODEL=text-embedding-3-small`
 
-Do ustawienia dla workflowu `triz-mcp-server`:
+Ustawione GitHub Actions secrets:
 
-- `EMBEDDING_SERVICE_URL=<external-ollama-openai-compatible-v1-url>`
-- `EMBEDDING_MODEL=embeddinggemma:300m`
+- `EMBEDDING_API_KEY` dla workflowu `triz-mcp-server`

@@ -38,6 +38,7 @@ async def search_parameter(query: str, limit: int = 5) -> str:
     """Search TRIZ engineering parameters by semantic similarity to a query string."""
     try:
         store = get_store()
+        await store.ensure_index()
         results = await store.search_parameters(query, top_k=limit)
         if not results:
             return "No parameters found."
@@ -53,6 +54,7 @@ async def search_principle(query: str, limit: int = 5) -> str:
     """Search TRIZ Inventive Principles by semantic similarity to a query string."""
     try:
         store = get_store()
+        await store.ensure_index()
         results = await store.search_principles(query, top_k=limit)
         if not results:
             return "No principles found."

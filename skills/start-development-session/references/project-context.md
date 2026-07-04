@@ -10,6 +10,7 @@ Use this document to load the Rosellas Hackathon project context before changing
 - Landing page: Angular 19 static landing app served by nginx from `apps/landing-page/`.
 - Main frontend: Angular 19 standalone SPA served by nginx from `apps/customer-portal/`.
 - Main backend: NestJS 10 API from `apps/general-ai-agent/`, globally prefixed with `/api`.
+- TRIZ MCP server: Python FastMCP service from `apps/triz-mcp-server/`, exposed over Streamable HTTP at `/mcp` and using an external OpenAI-compatible embeddings API.
 - Example frontend: Angular 19 standalone SPA served by nginx from `apps/examples/frontend/`.
 - Example backend: NestJS 10 CRUD API from `apps/examples/backend/`, globally prefixed with `/api`.
 - Database: Google Firestore Native, default database, `items` collection.
@@ -37,6 +38,8 @@ Use this document to load the Rosellas Hackathon project context before changing
 | Items API | `apps/examples/backend/src/items/` | Controller, DTOs, Firestore-backed service. |
 | Frontend app | `apps/examples/frontend/src/app/` | Standalone Angular component, model, service, styles. |
 | Frontend env | `apps/examples/frontend/src/environments/` | Local default API URL is `http://localhost:8080/api`; workflow rewrites prod env during deploy. |
+| TRIZ MCP app | `apps/triz-mcp-server/` | Python FastMCP server with TRIZ tools, Dockerfile, uv lockfile, and Nx build/serve targets. |
+| TRIZ MCP config | `apps/triz-mcp-server/app/core/config.py` | Reads MCP bind settings and external embeddings provider settings. |
 | Cloud Run images | `apps/examples/backend/Dockerfile`, `apps/examples/frontend/Dockerfile` | Service-specific container packaging. GitHub Actions builds Nx artifacts before Docker packaging. Backend uses `apps/examples/backend/cloudbuild.yaml` with repository root context. |
 | Deploy workflows | `.github/workflows/` | Infra bootstrap plus service-specific workflows named after Cloud Run services. |
 | Infra links | `docs/google-infra-links.md` | Current resource URLs and GCP identifiers. |
@@ -59,6 +62,7 @@ Run locally:
 npm run start:backend
 npm run start:frontend
 npm run start:landing
+npm run start:mcp
 ```
 
 Build:
@@ -68,6 +72,7 @@ npm run build
 npm run build:backend
 npm run build:frontend
 npm run build:landing
+npm run build:mcp
 ```
 
 There are currently no dedicated test scripts in either package. Use builds as the baseline verification unless the task adds tests.
@@ -93,6 +98,16 @@ Landing page environment:
 
 - Local Angular env points `workspaceUrl` to `http://localhost:4200`.
 - The landing deploy workflow resolves the deployed `customer-portal` Cloud Run URL and rewrites the app production environment with that URL plus build metadata during the CI build.
+
+TRIZ MCP environment:
+
+- `MCP_HOST`: defaults to `0.0.0.0`.
+- `MCP_PORT`: defaults to `8123`; the Docker image sets this to `8080`.
+- `PORT`: optional Cloud Run bind port override; when present it takes precedence over `MCP_PORT`.
+- `EMBEDDING_SERVICE_URL`: external OpenAI-compatible embeddings API base URL. Current deployed default is `https://api.openai.com/v1`.
+- `EMBEDDING_MODEL`: embeddings model name. Current deployed default is `text-embedding-3-small`.
+- `EMBEDDING_API_KEY`: required for semantic TRIZ tools in deploy. `OPENAI_API_KEY` and local legacy `OPEN_AI_API_KEY` are accepted as fallbacks.
+- The MCP index is built lazily on the first semantic search call so health and `tools/list` do not require an embeddings request during startup.
 
 Versioning details and the checklist for new apps live in `docs/versioning/README.md`.
 
@@ -131,6 +146,7 @@ GitHub Actions workflows:
 - `general-ai-agent.yml`: builds `apps/general-ai-agent` through Nx, packages the prebuilt artifact with Docker, pushes `general-ai-agent`, sets `MCP_URL`, and deploys Cloud Run.
 - `customer-portal.yml`: resolves `general-ai-agent`, builds `apps/customer-portal` through Nx, packages the prebuilt artifact with Docker, pushes `customer-portal`, and deploys Cloud Run.
 - `research-landing.yml`: resolves `customer-portal`, builds `apps/landing-page` through Nx, packages the prebuilt static artifact with Docker, pushes `research-landing`, and deploys Cloud Run.
+- `triz-mcp-server.yml`: builds `apps/triz-mcp-server` through Nx, packages the Python app with Docker, pushes `triz-mcp-server`, sets external embeddings env vars, and deploys Cloud Run.
 
 Workflow files and workflow `name` values should match the Cloud Run service they deploy.
 
@@ -140,7 +156,13 @@ Required GitHub Actions variables:
 - `GCP_REGION`
 - `WIF_PROVIDER`
 - `GCP_SERVICE_ACCOUNT`
-- `MCP_URL` for `general-ai-agent`
+- `EMBEDDING_SERVICE_URL` for `triz-mcp-server` (`https://api.openai.com/v1`)
+- `EMBEDDING_MODEL` for `triz-mcp-server` (`text-embedding-3-small`)
+- `MCP_URL` for `general-ai-agent` only if the workflow should not auto-resolve `triz-mcp-server`
+
+Required GitHub Actions secrets:
+
+- `EMBEDDING_API_KEY` for `triz-mcp-server`
 
 Do not assume deployed URLs are current from memory. Use `docs/google-infra-links.md` first, then verify with GCP/GitHub only when the user asks for live validation.
 
@@ -162,6 +184,7 @@ Use the narrowest useful verification:
 | --- | --- |
 | Backend TypeScript/API | `npm run build:backend` |
 | Frontend Angular/UI/API client | `npm run build:frontend` |
+| TRIZ MCP server | `npm run build:mcp`, then Docker smoke test against `/mcp` with `tools/list` and one semantic search tool. |
 | Cross-service or root config | `npm run build` |
 | Docs-only | Review rendered Markdown links and referenced paths. |
 | Workflow/deploy changes | Static review first; run live GitHub/GCP commands only when explicitly requested. |

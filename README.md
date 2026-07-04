@@ -14,7 +14,7 @@ Nx workspace for the hackathon apps.
 
 ## Prereqs
 
-The TRIZ MCP server must be running and reachable at `MCP_URL` (default `http://localhost:8123/mcp`). It uses an external Ollama/OpenAI-compatible embeddings API through `EMBEDDING_SERVICE_URL`; Ollama is not hosted inside this monorepo.
+The TRIZ MCP server must be running and reachable at `MCP_URL` (default `http://localhost:8123/mcp`). It uses an external OpenAI-compatible embeddings API through `EMBEDDING_SERVICE_URL`; embedding infrastructure is not hosted inside this monorepo.
 
 Install dependencies from the repository root:
 
@@ -33,7 +33,7 @@ Run the MCP server:
 
 ```bash
 cp apps/triz-mcp-server/.env.example apps/triz-mcp-server/.env
-# edit apps/triz-mcp-server/.env and set EMBEDDING_SERVICE_URL
+# edit apps/triz-mcp-server/.env and set EMBEDDING_API_KEY
 npm run start:mcp
 ```
 
@@ -161,11 +161,11 @@ GCP_REGION=europe-west1
 WIF_PROVIDER=projects/<project-number>/locations/global/workloadIdentityPools/github/providers/github
 GCP_SERVICE_ACCOUNT=github-deployer@<project-id>.iam.gserviceaccount.com
 MCP_URL=<deployed-or-private-triz-mcp-url>
-EMBEDDING_SERVICE_URL=<external-ollama-openai-compatible-v1-url>
-EMBEDDING_MODEL=embeddinggemma:300m
+EMBEDDING_SERVICE_URL=https://api.openai.com/v1
+EMBEDDING_MODEL=text-embedding-3-small
 ```
 
-`MCP_URL` is optional for `general-ai-agent`: if it is not set, the backend workflow resolves the `triz-mcp-server` Cloud Run URL and appends `/mcp`. `EMBEDDING_SERVICE_URL` is required by the `triz-mcp-server` workflow. Set `EMBEDDING_API_KEY` as a GitHub Actions secret when the external Ollama endpoint needs a token; otherwise the workflow falls back to `ollama`. Set `OPENAI_API_KEY` as a GitHub Actions secret to enable the Deep Agent chat on the deployed `general-ai-agent` (optional — without it the chat falls back to the LLM-free pipeline); `OPENAI_MODEL` and `OPENAI_REASONING_EFFORT` repository variables override the defaults.
+`MCP_URL` is optional for `general-ai-agent`: if it is not set, the backend workflow resolves the `triz-mcp-server` Cloud Run URL and appends `/mcp`. Set `EMBEDDING_API_KEY` as a GitHub Actions repository secret for the `triz-mcp-server` embeddings client. Set `OPENAI_API_KEY` as a GitHub Actions secret to enable the Deep Agent chat on the deployed `general-ai-agent` (optional — without it the chat falls back to the LLM-free pipeline); `OPENAI_MODEL` and `OPENAI_REASONING_EFFORT` repository variables override the defaults.
 
 The workflows use one Artifact Registry Docker repository:
 
