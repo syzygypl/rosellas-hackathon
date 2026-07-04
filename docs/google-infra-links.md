@@ -69,6 +69,7 @@ Backend używa kolekcji `items`.
 | Build history | https://console.cloud.google.com/cloud-build/builds?project=crud-hackathon-ml-20260703 |
 | Triggers | https://console.cloud.google.com/cloud-build/triggers?project=crud-hackathon-ml-20260703 |
 | Source upload bucket | https://console.cloud.google.com/storage/browser/crud-hackathon-ml-20260703_cloudbuild?project=crud-hackathon-ml-20260703 |
+| GitHub Actions source staging bucket | https://console.cloud.google.com/storage/browser/crud-hackathon-ml-20260703-github-cloud-build-source?project=crud-hackathon-ml-20260703 |
 
 Ostatnie smoke buildy:
 
@@ -88,6 +89,7 @@ Ostatnie smoke buildy:
 | Provider resource | `projects/59918194944/locations/global/workloadIdentityPools/github/providers/github` |
 | Provider condition | `assertion.repository == 'syzygypl/rosellas-hackathon'` |
 | Cloud Build source bucket roles | `roles/storage.objectAdmin`, `roles/storage.legacyBucketReader` on `gs://crud-hackathon-ml-20260703_cloudbuild` |
+| GitHub Cloud Build staging bucket roles | `roles/storage.objectAdmin`, `roles/storage.legacyBucketReader` on `gs://crud-hackathon-ml-20260703-github-cloud-build-source` |
 | WIF quota project role | `roles/serviceusage.serviceUsageConsumer` for `principalSet://iam.googleapis.com/projects/59918194944/locations/global/workloadIdentityPools/github/attribute.repository/syzygypl/rosellas-hackathon` |
 | WIF Cloud Build bucket roles | `roles/storage.objectAdmin`, `roles/storage.legacyBucketReader` on `gs://crud-hackathon-ml-20260703_cloudbuild` for the same GitHub repository principalSet |
 | WIF token creation role | `roles/iam.serviceAccountTokenCreator` on `github-deployer@crud-hackathon-ml-20260703.iam.gserviceaccount.com` for the same GitHub repository principalSet |

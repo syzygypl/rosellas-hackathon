@@ -16,6 +16,7 @@ permissions:
 env:
   ARTIFACT_REPOSITORY: cloud-run-apps
   BACKEND_SERVICE: crud-backend
+  CLOUD_BUILD_SOURCE_BUCKET: ${{ vars.CLOUD_BUILD_SOURCE_BUCKET || 'crud-hackathon-ml-20260703-github-cloud-build-source' }}
   FRONTEND_SERVICE: crud-frontend
   IMAGE_NAME: crud-frontend
   REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
@@ -73,6 +74,7 @@ jobs:
         run: |
           IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$ARTIFACT_REPOSITORY/$IMAGE_NAME:$GITHUB_SHA"
           gcloud builds submit frontend \
+            --gcs-source-staging-dir "gs://$CLOUD_BUILD_SOURCE_BUCKET/source" \
             --tag "$IMAGE" \
             --project "$PROJECT_ID"
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
