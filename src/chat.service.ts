@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { AgentService, AgentToolCall } from './agent.service';
 import { SolverService } from './solver.service';
 import { TrizMcpService, TrizParameter } from './triz-mcp.service';
@@ -28,6 +28,7 @@ export interface ChatResult {
   answer: string;
   engine: 'agent' | 'pipeline';
   solution: ChatSolution | null;
+  warning?: string;
 }
 
 /**
@@ -54,14 +55,20 @@ export class ChatService {
       return { answer: 'Opisz swój problem techniczny, a poszukam rozwiązań TRIZ.', engine: 'pipeline', solution: null };
     }
 
-    if (process.env.OPENAI_API_KEY) {
+    if (this.agent.isConfigured()) {
       try {
         return await this.agentChat(messages, lastUser.content);
       } catch (err) {
-        this.logger.warn(`Agent chat failed, falling back to pipeline: ${err}`);
+        const message = err instanceof Error ? err.message : String(err);
+        this.logger.error(`Agent chat failed: ${message}`, err instanceof Error ? err.stack : undefined);
+        throw new ServiceUnavailableException(
+          `OpenAI agent failed; refusing silent fallback. ${message}`,
+        );
       }
     }
-    return this.pipelineChat(messages);
+    const result = await this.pipelineChat(messages);
+    result.warning = this.agent.configurationError();
+    return result;
   }
 
   // --- Agent path -----------------------------------------------------------

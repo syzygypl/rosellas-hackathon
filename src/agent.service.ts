@@ -90,6 +90,19 @@ export class AgentService {
   private intakeModel: { invoke(input: unknown): Promise<unknown> } | null = null;
   private lightModel: ChatOpenAI | null = null;
 
+  isConfigured(): boolean {
+    return Boolean(process.env.OPENAI_API_KEY?.trim());
+  }
+
+  configurationError(): string {
+    return [
+      'OpenAI agent is disabled because OPENAI_API_KEY is not set.',
+      'Set OPENAI_API_KEY in .env or in the process environment to enable the agent.',
+      `Current agent config: OPENAI_MODEL=${this.model}, OPENAI_REASONING_EFFORT=${this.reasoningEffort}, MCP_URL=${this.mcpUrl}.`,
+      'The LLM-free /api/solve pipeline remains available.',
+    ].join(' ');
+  }
+
   /** Build the MCP client + agent once, reuse across requests. */
   private getAgent() {
     if (!this.agentPromise) {
@@ -177,10 +190,8 @@ export class AgentService {
   async chat(
     history: { role: 'user' | 'assistant'; content: string }[],
   ): Promise<{ answer: string; toolCalls: AgentToolCall[] }> {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new ServiceUnavailableException(
-        'Deep Agent endpoint requires OPENAI_API_KEY to be set (see .env.example). The LLM-free /api/solve endpoint remains available.',
-      );
+    if (!this.isConfigured()) {
+      throw new ServiceUnavailableException(this.configurationError());
     }
 
     const agent = await this.getAgent();

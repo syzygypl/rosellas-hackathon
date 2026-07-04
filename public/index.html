@@ -112,6 +112,30 @@
   .report ul { margin: 6px 0; padding-left: 20px; }
   .muted { opacity: 0.6; font-size: 0.82rem; }
 
+  .toasts {
+    position: fixed; top: 16px; right: 16px; z-index: 20;
+    display: flex; flex-direction: column; gap: 10px;
+    width: min(420px, calc(100vw - 32px));
+    pointer-events: none;
+  }
+  .toast {
+    pointer-events: auto;
+    border: 1px solid var(--border); border-left: 4px solid var(--accent);
+    border-radius: 10px; padding: 10px 12px;
+    background: Canvas; color: CanvasText;
+    box-shadow: 0 10px 28px #0003;
+    font-size: 0.86rem;
+  }
+  .toast.warning { border-left-color: #d97706; }
+  .toast.error { border-left-color: #dc2626; }
+  .toast-head { display: flex; justify-content: space-between; gap: 12px; font-weight: 700; }
+  .toast-body { margin-top: 4px; overflow-wrap: anywhere; opacity: 0.84; }
+  .toast-close {
+    border: 0; background: transparent; color: inherit; cursor: pointer;
+    font: inherit; line-height: 1; padding: 0 2px; opacity: 0.7;
+  }
+  .toast-close:hover { opacity: 1; }
+
   @media (max-width: 900px) {
     .layout { flex-direction: column; }
     main.chat { border-right: 0; border-bottom: 1px solid var(--border); flex: 1; }
@@ -146,6 +170,8 @@
     </aside>
   </div>
 
+  <div id="toasts" class="toasts" aria-live="polite" aria-atomic="true"></div>
+
 <script>
 const $ = (id) => document.getElementById(id);
 const esc = (s) => (s ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
@@ -171,6 +197,21 @@ function addMsg(cls, html) {
   $('messages').appendChild(div);
   $('messages').scrollTop = $('messages').scrollHeight;
   return div;
+}
+
+function showToast(title, body, kind = 'warning') {
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + kind;
+  toast.innerHTML = `
+    <div class="toast-head">
+      <span>${esc(title)}</span>
+      <button class="toast-close" type="button" aria-label="Zamknij">×</button>
+    </div>
+    <div class="toast-body">${esc(body)}</div>`;
+  const remove = () => toast.remove();
+  toast.querySelector('.toast-close').addEventListener('click', remove);
+  $('toasts').appendChild(toast);
+  setTimeout(remove, kind === 'error' ? 14000 : 10000);
 }
 
 function paramLine(p) {
@@ -234,13 +275,14 @@ async function send() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages: history }),
     });
-    if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + await res.text());
+    if (!res.ok) throw new Error(await responseError(res));
     const r = await res.json();
     typing.remove();
 
     let solId = null;
     if (r.solution) solId = addSolution(r.solution, r.engine);
 
+    if (r.warning) showToast('Konfiguracja OpenAI', r.warning, 'warning');
     const bubble = addMsg('bot', md(r.answer || '(pusta odpowiedź)'));
     if (solId) {
       const link = document.createElement('span');
@@ -257,10 +299,21 @@ async function send() {
     history.push({ role: 'assistant', content: r.answer || '' });
   } catch (e) {
     typing.remove();
-    addMsg('bot error', '<strong>Błąd:</strong> ' + esc(String(e)));
+    showToast('Błąd żądania', String(e), 'error');
     // keep the user message in history so a retry has full context
   } finally {
     btn.disabled = false; input.disabled = false; input.focus();
+  }
+}
+
+async function responseError(res) {
+  const text = await res.text();
+  try {
+    const body = JSON.parse(text);
+    const message = Array.isArray(body.message) ? body.message.join('; ') : body.message;
+    return `HTTP ${res.status}: ${message || text || res.statusText}`;
+  } catch {
+    return `HTTP ${res.status}: ${text || res.statusText}`;
   }
 }
 
