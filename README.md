@@ -265,10 +265,12 @@ artifact on pull requests, pushes, and manual dispatch. More details are in
 [design-system/README.md](design-system/README.md).
 
 The `.github/workflows/design-system-showcase.yml` workflow builds and deploys
-the static showcase app to Cloud Run service `design-system-showcase`, then
-ensures the custom domain mapping for `desing.idealab.expert`. The domain must
-be verified in Google Search Console and its DNS records must point to the
-Cloud Run domain mapping output.
+the static showcase app to Cloud Run service `design-system-showcase`. The
+public host `desing.idealab.expert` is routed through the existing
+`rosellas-main-*` global HTTPS load balancer, using Cloud DNS A record
+`8.233.81.204`, serverless NEG `rosellas-main-design-showcase-neg`, backend
+service `rosellas-main-design-showcase-bs`, and Google-managed certificate
+`rosellas-main-design-cert-20260704-1526z`.
 
 ## GitHub Actions Configuration
 
@@ -287,7 +289,7 @@ EMBEDDING_MODEL=text-embedding-3-small
 
 `MCP_URL` and `SCAMPER_MCP_URL` are optional for `general-ai-agent`: if they are not set, the backend workflow uses the regional `triz-mcp-server` / `scamper-mcp-server` Cloud Run URLs and appends `/mcp`. The MCP workflow uses `GCP_PROJECT_NUMBER` to allow the Cloud Run Host header in MCP transport security. Set `EMBEDDING_API_KEY` as a GitHub Actions repository secret for the `triz-mcp-server` embeddings client. Set `OPENAI_API_KEY` as a GitHub Actions secret to enable the Deep Agent chat on the deployed `general-ai-agent`; if it is absent, the workflow falls back to `EMBEDDING_API_KEY`, then legacy `OPEN_AI_API_KEY`. Without any compatible key the chat falls back to the LLM-free pipeline. `OPENAI_MODEL` and `OPENAI_REASONING_EFFORT` repository variables override the defaults. Set `LANGFUSE_SECRET_KEY` as a secret and `LANGFUSE_PUBLIC_KEY` as a repository variable to enable deployed Langfuse tracing; `LANGFUSE_BASE_URL` and `LANGFUSE_TRACING_ENVIRONMENT` are optional variables.
 
-The `design-system-showcase` workflow maps `desing.idealab.expert`. The base domain must be verified for the GitHub deployer service account before the mapping step runs, and the DNS records printed by the workflow must be added at the domain provider.
+The `desing.idealab.expert` host is managed by the existing global HTTPS load balancer and Cloud DNS zone, not by Cloud Run domain mappings.
 
 The workflows use one Artifact Registry Docker repository:
 
@@ -322,7 +324,7 @@ After that:
 - changes under `apps/scamper-mcp-server/**` deploy only `scamper-mcp-server`;
 - frontend workflows resolve the paired backend Cloud Run URL and build Angular with `API_URL=<backend-url>/api`;
 - the landing workflow resolves the `customer-portal` Cloud Run URL and builds Angular with `workspaceUrl=<customer-portal-url>`;
-- the design system showcase workflow maps `desing.idealab.expert` to `design-system-showcase`;
+- the design system showcase workflow deploys `design-system-showcase`; `desing.idealab.expert` routes through the existing global HTTPS load balancer;
 - backend workflows set version metadata and CORS for the paired frontend regional URL.
 - `general-ai-agent` also sets `MCP_URL` and `SCAMPER_MCP_URL`, using the regional `triz-mcp-server` / `scamper-mcp-server` URLs automatically when they are not configured manually.
 

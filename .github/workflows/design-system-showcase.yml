@@ -21,7 +21,6 @@ permissions:
 env:
   ARTIFACT_REPOSITORY: cloud-run-apps
   CLOUD_BUILD_SOURCE_BUCKET: ${{ vars.CLOUD_BUILD_SOURCE_BUCKET || 'crud-hackathon-ml-20260703-github-cloud-build-source' }}
-  CUSTOM_DOMAIN: desing.idealab.expert
   IMAGE_NAME: design-system-showcase
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
   REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
@@ -39,7 +38,6 @@ jobs:
       - name: Validate configuration
         run: |
           test -n "$PROJECT_ID"
-          test -n "$CUSTOM_DOMAIN"
           test -n "${{ vars.WIF_PROVIDER }}"
           test -n "${{ vars.GCP_SERVICE_ACCOUNT }}"
 
@@ -54,7 +52,6 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.PROJECT_ID }}
-          install_components: beta
 
       - name: Set Cloud Run defaults
         run: |
@@ -117,30 +114,3 @@ jobs:
             --project "$PROJECT_ID" \
             --allow-unauthenticated \
             --quiet
-
-      - name: Ensure custom domain mapping
-        run: |
-          if MAPPED_SERVICE="$(gcloud beta run domain-mappings describe \
-              --domain "$CUSTOM_DOMAIN" \
-              --region "$REGION" \
-              --project "$PROJECT_ID" \
-              --format='value(spec.routeName)' 2>/dev/null)"; then
-            echo "Domain mapping exists: $CUSTOM_DOMAIN -> ${MAPPED_SERVICE:-unknown}"
-            if [ -n "$MAPPED_SERVICE" ] && [ "$MAPPED_SERVICE" != "$SHOWCASE_SERVICE" ]; then
-              echo "Domain $CUSTOM_DOMAIN is mapped to $MAPPED_SERVICE, not $SHOWCASE_SERVICE."
-              exit 1
-            fi
-          else
-            gcloud beta run domain-mappings create \
-              --service "$SHOWCASE_SERVICE" \
-              --domain "$CUSTOM_DOMAIN" \
-              --region "$REGION" \
-              --project "$PROJECT_ID" \
-              --quiet
-          fi
-
-          gcloud beta run domain-mappings describe \
-            --domain "$CUSTOM_DOMAIN" \
-            --region "$REGION" \
-            --project "$PROJECT_ID" \
-            --format='yaml(status.conditions,status.resourceRecords)'

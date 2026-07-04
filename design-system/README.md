@@ -67,7 +67,7 @@ npm run start:design-system-showcase
 `design-system:validate` performs offline schema checks.
 `design-system:figma:plugin:build` generates the local free plugin.
 `start:design-system-showcase` runs the static browser showcase locally.
-The deploy workflow maps the Cloud Run service to `desing.idealab.expert` after the domain is verified and DNS records are configured.
+The deployed host `desing.idealab.expert` routes through the existing global HTTPS load balancer and Cloud DNS zone.
 
 Agents changing this workflow should use
 `skills/generate-figma-design-system/SKILL.md`.
