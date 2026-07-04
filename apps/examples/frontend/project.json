@@ -1,0 +1,33 @@
+{
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "name": "frontend",
+  "projectType": "application",
+  "root": "apps/examples/frontend",
+  "sourceRoot": "apps/examples/frontend/src",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": [
+        "{projectRoot}/dist/crud-frontend"
+      ],
+      "options": {
+        "cwd": "apps/examples/frontend",
+        "command": "../../../node_modules/.bin/ng build --configuration production"
+      }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/examples/frontend",
+        "command": "../../../node_modules/.bin/ng serve"
+      }
+    },
+    "watch": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/examples/frontend",
+        "command": "../../../node_modules/.bin/ng build --watch --configuration development"
+      }
+    }
+  }
+}

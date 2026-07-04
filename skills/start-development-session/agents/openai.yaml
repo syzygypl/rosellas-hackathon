@@ -1,0 +1,4 @@
+interface:
+  display_name: "Start Development Session"
+  short_description: "Load Rosellas project context"
+  default_prompt: "Use $start-development-session to load the Rosellas Hackathon project context before making changes."

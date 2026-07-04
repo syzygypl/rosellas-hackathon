@@ -1,0 +1,16 @@
+---
+description: Load Rosellas Hackathon project context before coding
+alwaysApply: true
+---
+
+Before changing code, docs, infrastructure, workflows, or deployment configuration in this repository, read `skills/start-development-session/SKILL.md`, then read `skills/start-development-session/references/project-context.md`.
+
+Use that skill directory as the canonical project context for:
+
+- architecture and service boundaries;
+- local commands and verification;
+- backend and frontend runtime configuration;
+- API paths and data shape;
+- Cloud Run and GitHub Actions deployment notes.
+
+For current deployed URLs and GCP/GitHub console links, read `docs/google-infra-links.md`.

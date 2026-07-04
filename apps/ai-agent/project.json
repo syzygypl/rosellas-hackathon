@@ -1,0 +1,33 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "ai-agent",
+  "projectType": "application",
+  "root": "apps/ai-agent",
+  "sourceRoot": "apps/ai-agent/src",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": [
+        "{projectRoot}/dist"
+      ],
+      "options": {
+        "cwd": "apps/ai-agent",
+        "command": "../../node_modules/.bin/nest build"
+      }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/ai-agent",
+        "command": "../../node_modules/.bin/nest start --watch"
+      }
+    },
+    "start": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/ai-agent",
+        "command": "../../node_modules/.bin/nest start"
+      }
+    }
+  }
+}

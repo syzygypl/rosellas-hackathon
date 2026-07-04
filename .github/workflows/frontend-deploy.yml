@@ -6,7 +6,10 @@ on:
       - main
       - master
     paths:
-      - 'frontend/**'
+      - 'apps/examples/frontend/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'nx.json'
   workflow_dispatch:
 
 permissions:
@@ -16,6 +19,7 @@ permissions:
 env:
   ARTIFACT_REPOSITORY: cloud-run-apps
   BACKEND_SERVICE: crud-backend
+  CLOUD_BUILD_SOURCE_BUCKET: ${{ vars.CLOUD_BUILD_SOURCE_BUCKET || 'crud-hackathon-ml-20260703-github-cloud-build-source' }}
   FRONTEND_SERVICE: crud-frontend
   IMAGE_NAME: crud-frontend
   REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
@@ -41,6 +45,7 @@ jobs:
         with:
           workload_identity_provider: ${{ vars.WIF_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
 
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
@@ -60,20 +65,45 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Build Angular frontend
         run: |
-          printf "export const environment = {\n  production: true,\n  apiUrl: '%s',\n};\n" "$API_URL" > frontend/src/environments/environment.prod.ts
-          npm ci --prefix frontend
-          npm --prefix frontend run build
+          printf "export const environment = {\n  production: true,\n  apiUrl: '%s',\n};\n" "$API_URL" > apps/examples/frontend/src/environments/environment.prod.ts
+          npm ci
+          npm run build:frontend
 
       - name: Build and publish frontend image
         run: |
           IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$ARTIFACT_REPOSITORY/$IMAGE_NAME:$GITHUB_SHA"
-          gcloud builds submit frontend \
+          BUILD_ID="$(gcloud builds submit apps/examples/frontend \
+            --gcs-source-staging-dir "gs://$CLOUD_BUILD_SOURCE_BUCKET/source" \
+            --gcs-log-dir "gs://$CLOUD_BUILD_SOURCE_BUCKET/logs" \
+            --async \
+            --format='value(id)' \
             --tag "$IMAGE" \
-            --project "$PROJECT_ID"
+            --project "$PROJECT_ID")"
+
+          echo "Cloud Build: https://console.cloud.google.com/cloud-build/builds/$BUILD_ID?project=$PROJECT_ID"
+          for _ in {1..120}; do
+            STATUS="$(gcloud builds describe "$BUILD_ID" \
+              --project "$PROJECT_ID" \
+              --format='value(status)')"
+
+            echo "Cloud Build status: $STATUS"
+            case "$STATUS" in
+              SUCCESS)
+                break
+                ;;
+              FAILURE|INTERNAL_ERROR|TIMEOUT|CANCELLED|EXPIRED)
+                exit 1
+                ;;
+            esac
+
+            sleep 5
+          done
+
+          test "$STATUS" = "SUCCESS"
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
 
       - name: Deploy frontend to Cloud Run
