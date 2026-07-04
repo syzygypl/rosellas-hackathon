@@ -13,6 +13,8 @@ from app.core.logger import setup_logging
 from app.services.triz import get_store
 from app.tools import register as register_tools
 
+setup_logging(config.LOG_LEVEL)
+
 
 @dataclass
 class AppContext:
@@ -22,7 +24,6 @@ class AppContext:
 
 @asynccontextmanager
 async def lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
-    setup_logging()
     store = get_store()
     yield AppContext(config=config, store=store)
 
@@ -59,4 +60,9 @@ if __name__ == "__main__":
         allow_headers=["*"],
         expose_headers=["Mcp-Session-Id"],
     )
-    uvicorn.run(app, host=config.MCP_HOST, port=config.bind_port)
+    uvicorn.run(
+        app,
+        host=config.MCP_HOST,
+        port=config.bind_port,
+        log_config=None,
+    )

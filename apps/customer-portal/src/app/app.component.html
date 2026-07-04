@@ -4,9 +4,20 @@
       <p class="eyebrow">TRIZ AI agent</p>
       <h1>Inventive Problem Solver</h1>
     </div>
-    <span class="status" [class.status-busy]="loading()">
-      {{ loading() ? 'Myślę…' : 'Gotowy' }}
-    </span>
+    <div class="topbar-actions">
+      <button
+        type="button"
+        class="reset"
+        (click)="resetChat()"
+        [disabled]="loading()"
+        title="Wyczyść rozmowę i panel rozwiązań"
+      >
+        ✨ Nowy problem
+      </button>
+      <span class="status" [class.status-busy]="loading()">
+        {{ loading() ? 'Myślę…' : 'Gotowy' }}
+      </span>
+    </div>
   </header>
 
   <div class="layout">
@@ -20,21 +31,38 @@
                 → zobacz rozwiązanie #{{ bubble.solutionId }} w panelu
               </button>
             }
+            @if (bubble.retry && $last && !loading()) {
+              <button type="button" class="solution-link" (click)="retry()">
+                ↻ Spróbuj ponownie
+              </button>
+            }
+            @if ($last && !loading() && bubble.suggestions?.length) {
+              <div class="suggestions">
+                @for (suggestion of bubble.suggestions; track $index) {
+                  <button type="button" class="chip" (click)="sendSuggestion(suggestion)">
+                    {{ suggestion }}
+                  </button>
+                }
+              </div>
+            }
           </div>
         }
         @if (loading()) {
           <div class="msg bot typing">
             <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="typing-status">{{ loadingStatus() }}</span>
           </div>
         }
       </div>
 
       <form class="composer" (ngSubmit)="send()">
         <textarea
+          #composerInput
           name="input"
           rows="1"
           [(ngModel)]="input"
           (keydown.enter)="onEnter($event)"
+          (input)="autoGrow()"
           placeholder="Opisz problem lub dopytaj…"
           [disabled]="loading()"
         ></textarea>
@@ -49,58 +77,131 @@
       <div class="solution-list">
         @if (!solutions().length) {
           <p class="muted">
-            Tu pojawią się kolejne rozwiązania: wykryte parametry TRIZ, sprzeczność
-            techniczna i zasady wynalazcze z macierzy sprzeczności.
+            Tu pojawią się karty rozwiązań: sedno Twojego problemu prostymi słowami
+            i jedno najlepsze rozwiązanie wybrane spośród metod TRIZ i SCAMPER,
+            z pozostałymi kierunkami do podejrzenia.
           </p>
         }
         @for (card of solutions(); track card.id) {
           <article class="card" [id]="'sol-' + card.id" [class.flash]="card.flash">
             <h2>
               #{{ card.id }} {{ card.sol.title }}
+              @if (card.sol.method) {
+                <span class="badge method">{{ card.sol.method }}</span>
+              }
               <span class="badge">{{ engineLabel(card.engine) }}</span>
             </h2>
 
+            @if (card.sol.summary) {
+              <p class="summary">{{ card.sol.summary }}</p>
+            }
+
             @if (card.sol.contradiction) {
-              <p class="contradiction"><strong>Sprzeczność:</strong> {{ card.sol.contradiction }}</p>
+              <blockquote class="contradiction">⚖️ {{ card.sol.contradiction }}</blockquote>
+            }
+
+            @if (card.sol.bestDirection; as best) {
+              <div class="best-direction">
+                <span class="best-label">🏆 Najlepsze rozwiązanie</span>
+                <h3>{{ best.principle }}</h3>
+                <p>{{ best.idea }}</p>
+                @if (best.example) {
+                  <p class="example">💬 {{ best.example }}</p>
+                }
+                @if (card.sol.whyBest) {
+                  <p class="why-best">{{ card.sol.whyBest }}</p>
+                }
+                @if (card.sol.methodRationale) {
+                  <p class="method-rationale">{{ card.sol.methodRationale }}</p>
+                }
+              </div>
+            } @else if (card.sol.methodRationale) {
+              <p class="method-rationale">🏆 {{ card.sol.methodRationale }}</p>
+            }
+
+            @if (card.sol.directions?.length) {
+              @if (card.sol.bestDirection) {
+                <details class="alternatives">
+                  <summary>🧭 Pozostałe kierunki ({{ card.sol.directions!.length }})</summary>
+                  <div class="directions">
+                    @for (direction of card.sol.directions; track $index) {
+                      <div class="direction">
+                        <h3>{{ direction.principle }}</h3>
+                        <p>{{ direction.idea }}</p>
+                        @if (direction.example) {
+                          <p class="example">💬 {{ direction.example }}</p>
+                        }
+                      </div>
+                    }
+                  </div>
+                </details>
+              } @else {
+                <div class="directions">
+                  @for (direction of card.sol.directions; track $index) {
+                    <div class="direction">
+                      <h3>{{ direction.principle }}</h3>
+                      <p>{{ direction.idea }}</p>
+                      @if (direction.example) {
+                        <p class="example">💬 {{ direction.example }}</p>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            }
+
+            @if (card.sol.nextSteps?.length) {
+              <div class="next-steps">
+                <span class="next-steps-label">Co dalej?</span>
+                <ul>
+                  @for (step of card.sol.nextSteps; track $index) {
+                    <li>{{ step }}</li>
+                  }
+                </ul>
+              </div>
             }
 
             @if (card.reportHtml) {
-              <details open>
+              <details [open]="!card.sol.bestDirection && !card.sol.directions?.length">
                 <summary>📝 Pełny raport</summary>
                 <div class="report" [innerHTML]="card.reportHtml"></div>
               </details>
             }
 
-            <details [open]="!card.reportHtml">
-              <summary>🔎 Parametry TRIZ ({{ card.sol.parameters.length }})</summary>
-              @for (parameter of card.sol.parameters; track parameter.id) {
-                <div class="param">
-                  <span class="pid">[{{ parameter.id }}]</span>
-                  <strong>{{ parameter.name }}</strong><br />
-                  <span class="muted">{{ parameter.description }}</span>
-                </div>
-              } @empty {
-                <p class="muted">brak dopasowania</p>
-              }
-            </details>
+            <details class="tech" [open]="!card.sol.bestDirection && !card.sol.directions?.length">
+              <summary>🔬 Szczegóły techniczne (TRIZ / SCAMPER)</summary>
 
-            <details [open]="!card.reportHtml">
-              <summary>💡 Zasady wynalazcze z macierzy</summary>
-              <pre>{{ card.sol.principles || '—' }}</pre>
-            </details>
-
-            <details>
-              <summary>🧭 Powiązane zasady / dodatkowe kierunki</summary>
-              <pre>{{ card.sol.related || '—' }}</pre>
-            </details>
-
-            <details>
-              <summary>🧾 Ślad rozumowania</summary>
-              <ol class="trail">
-                @for (step of card.sol.trail; track $index) {
-                  <li>{{ step }}</li>
+              <details [open]="!card.reportHtml">
+                <summary>🔎 Parametry TRIZ ({{ card.sol.parameters.length }})</summary>
+                @for (parameter of card.sol.parameters; track parameter.id) {
+                  <div class="param">
+                    <span class="pid">[{{ parameter.id }}]</span>
+                    <strong>{{ parameter.name }}</strong><br />
+                    <span class="muted">{{ parameter.description }}</span>
+                  </div>
+                } @empty {
+                  <p class="muted">brak dopasowania</p>
                 }
-              </ol>
+              </details>
+
+              <details [open]="!card.reportHtml">
+                <summary>💡 Zasady wynalazcze z macierzy</summary>
+                <pre>{{ card.sol.principles || '—' }}</pre>
+              </details>
+
+              <details>
+                <summary>🧭 Powiązane zasady / kierunki SCAMPER</summary>
+                <pre>{{ card.sol.related || '—' }}</pre>
+              </details>
+
+              <details>
+                <summary>🧾 Ślad rozumowania</summary>
+                <ol class="trail">
+                  @for (step of card.sol.trail; track $index) {
+                    <li>{{ step }}</li>
+                  }
+                </ol>
+              </details>
             </details>
           </article>
         }
@@ -120,3 +221,13 @@
     </div>
   }
 </div>
+
+<button
+  type="button"
+  class="session-copy"
+  title="Copy session id"
+  aria-label="Copy session id"
+  (click)="copySessionId()"
+>
+  Copy session id
+</button>

@@ -46,6 +46,10 @@ jobs:
             cloudbuild.googleapis.com \
             artifactregistry.googleapis.com \
             firestore.googleapis.com \
+            logging.googleapis.com \
+            monitoring.googleapis.com \
+            clouderrorreporting.googleapis.com \
+            cloudtrace.googleapis.com \
             --project "$PROJECT_ID"
 
       - name: Ensure Firestore database

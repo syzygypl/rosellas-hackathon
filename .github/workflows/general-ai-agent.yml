@@ -24,6 +24,7 @@ env:
   FRONTEND_SERVICE: customer-portal
   IMAGE_NAME: general-ai-agent
   MCP_SERVICE: triz-mcp-server
+  SCAMPER_MCP_SERVICE: scamper-mcp-server
   PROJECT_NUMBER: ${{ vars.GCP_PROJECT_NUMBER || '59918194944' }}
   REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
@@ -117,15 +118,33 @@ jobs:
                 --project "$PROJECT_ID" \
                 --format='value(status.url)' 2>/dev/null)"; then
               echo "Resolved MCP service URL: $MCP_SERVICE_URL"
+              echo "Using regional MCP URL: $REGIONAL_MCP_URL"
             else
-              MCP_SERVICE_URL="$REGIONAL_MCP_URL"
-              echo "MCP service not found yet; using regional URL: $MCP_SERVICE_URL"
+              echo "MCP service not found yet; using regional URL: $REGIONAL_MCP_URL"
             fi
 
-            MCP_URL="${MCP_SERVICE_URL%/}/mcp"
+            MCP_URL="${REGIONAL_MCP_URL%/}/mcp"
           fi
 
-          ENV_VARS="^@^MCP_URL=$MCP_URL@GOOGLE_CLOUD_PROJECT=$PROJECT_ID@APP_VERSION=$APP_VERSION@GIT_SHA=$GITHUB_SHA@BUILD_TIME=$BUILD_TIME"
+          SCAMPER_MCP_URL="${{ vars.SCAMPER_MCP_URL }}"
+          if [ -n "$SCAMPER_MCP_URL" ]; then
+            echo "Using SCAMPER_MCP_URL from repository variables."
+          else
+            REGIONAL_SCAMPER_MCP_URL="https://$SCAMPER_MCP_SERVICE-$PROJECT_NUMBER.$REGION.run.app"
+            if SCAMPER_MCP_SERVICE_URL="$(gcloud run services describe "$SCAMPER_MCP_SERVICE" \
+                --region "$REGION" \
+                --project "$PROJECT_ID" \
+                --format='value(status.url)' 2>/dev/null)"; then
+              echo "Resolved SCAMPER MCP service URL: $SCAMPER_MCP_SERVICE_URL"
+              echo "Using regional SCAMPER MCP URL: $REGIONAL_SCAMPER_MCP_URL"
+            else
+              echo "SCAMPER MCP service not found yet; using regional URL: $REGIONAL_SCAMPER_MCP_URL"
+            fi
+
+            SCAMPER_MCP_URL="${REGIONAL_SCAMPER_MCP_URL%/}/mcp"
+          fi
+
+          ENV_VARS="^@^MCP_URL=$MCP_URL@SCAMPER_MCP_URL=$SCAMPER_MCP_URL@GOOGLE_CLOUD_PROJECT=$PROJECT_ID@APP_VERSION=$APP_VERSION@GIT_SHA=$GITHUB_SHA@BUILD_TIME=$BUILD_TIME@LOG_LEVEL=INFO"
           REGIONAL_FRONTEND_URL="https://$FRONTEND_SERVICE-$PROJECT_NUMBER.$REGION.run.app"
 
           if FRONTEND_URL="$(gcloud run services describe "$FRONTEND_SERVICE" \
@@ -143,14 +162,37 @@ jobs:
 
           ENV_VARS="$ENV_VARS@CORS_ORIGIN=$CORS_ORIGIN"
 
-          # Deep Agent chat: optional — without the key the backend serves the
-          # LLM-free pipeline and the chat returns a configuration warning.
+          # Deep Agent chat: optional — without a compatible key the backend
+          # serves the LLM-free pipeline and returns a configuration warning.
+          OPENAI_COMPATIBLE_API_KEY=""
           if [ -n "${{ secrets.OPENAI_API_KEY }}" ]; then
-            ENV_VARS="$ENV_VARS@OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}"
+            OPENAI_COMPATIBLE_API_KEY="${{ secrets.OPENAI_API_KEY }}"
+            echo "Using OPENAI_API_KEY for the Deep Agent chat."
+          elif [ -n "${{ secrets.EMBEDDING_API_KEY }}" ]; then
+            OPENAI_COMPATIBLE_API_KEY="${{ secrets.EMBEDDING_API_KEY }}"
+            echo "OPENAI_API_KEY secret not set; using EMBEDDING_API_KEY for the Deep Agent chat."
+          elif [ -n "${{ secrets.OPEN_AI_API_KEY }}" ]; then
+            OPENAI_COMPATIBLE_API_KEY="${{ secrets.OPEN_AI_API_KEY }}"
+            echo "OPENAI_API_KEY secret not set; using OPEN_AI_API_KEY for the Deep Agent chat."
+          fi
+
+          if [ -n "$OPENAI_COMPATIBLE_API_KEY" ]; then
+            ENV_VARS="$ENV_VARS@OPENAI_API_KEY=$OPENAI_COMPATIBLE_API_KEY"
             ENV_VARS="$ENV_VARS@OPENAI_MODEL=${{ vars.OPENAI_MODEL || 'gpt-5.5' }}"
             ENV_VARS="$ENV_VARS@OPENAI_REASONING_EFFORT=${{ vars.OPENAI_REASONING_EFFORT || 'low' }}"
           else
-            echo "OPENAI_API_KEY secret not set; deploying without the Deep Agent chat."
+            echo "No OpenAI-compatible API key secret set; deploying without the Deep Agent chat."
+          fi
+
+          # Langfuse tracing: optional. Both public and secret keys are required.
+          if [ -n "${{ vars.LANGFUSE_PUBLIC_KEY }}" ] && [ -n "${{ secrets.LANGFUSE_SECRET_KEY }}" ]; then
+            ENV_VARS="$ENV_VARS@LANGFUSE_PUBLIC_KEY=${{ vars.LANGFUSE_PUBLIC_KEY }}"
+            ENV_VARS="$ENV_VARS@LANGFUSE_SECRET_KEY=${{ secrets.LANGFUSE_SECRET_KEY }}"
+            ENV_VARS="$ENV_VARS@LANGFUSE_BASE_URL=${{ vars.LANGFUSE_BASE_URL || 'https://cloud.langfuse.com' }}"
+            ENV_VARS="$ENV_VARS@LANGFUSE_TRACING_ENVIRONMENT=${{ vars.LANGFUSE_TRACING_ENVIRONMENT || 'production' }}"
+            ENV_VARS="$ENV_VARS@LANGCHAIN_CALLBACKS_BACKGROUND=false"
+          else
+            echo "Langfuse keys not set; deploying without Langfuse tracing."
           fi
 
           echo "BACKEND_ENV_VARS=$ENV_VARS" >> "$GITHUB_ENV"

@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { LangfuseTracingService } from './langfuse-tracing.service';
 
 export interface TrizParameter {
   id: number;
@@ -17,42 +18,55 @@ export class TrizMcpService {
   private readonly url = process.env.MCP_URL || 'http://localhost:8123/mcp';
   private rpcId = 0;
 
+  constructor(private readonly tracing: LangfuseTracingService) {}
+
   /** Low-level: call an MCP tool and return its plain-text result. */
   private async callTool(name: string, args: Record<string, unknown>): Promise<string> {
-    const body = {
-      jsonrpc: '2.0',
-      id: ++this.rpcId,
-      method: 'tools/call',
-      params: { name, arguments: args },
-    };
-
-    const res = await fetch(this.url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json, text/event-stream',
+    return this.tracing.trace(
+      `mcp.${name}`,
+      {
+        input: { name, args },
+        metadata: { mcpUrl: this.url, tool: name },
+        tags: ['mcp', 'tool', name],
+        type: 'tool',
       },
-      body: JSON.stringify(body),
-    });
+      async () => {
+        const body = {
+          jsonrpc: '2.0',
+          id: ++this.rpcId,
+          method: 'tools/call',
+          params: { name, arguments: args },
+        };
 
-    if (!res.ok) {
-      throw new Error(`MCP ${name} failed: HTTP ${res.status} ${await res.text()}`);
-    }
+        const res = await fetch(this.url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json, text/event-stream',
+          },
+          body: JSON.stringify(body),
+        });
 
-    const raw = await res.text();
-    const payload = this.parseBody(raw);
+        if (!res.ok) {
+          throw new Error(`MCP ${name} failed: HTTP ${res.status} ${await res.text()}`);
+        }
 
-    if (payload?.error) {
-      throw new Error(`MCP ${name} error: ${JSON.stringify(payload.error)}`);
-    }
+        const raw = await res.text();
+        const payload = this.parseBody(raw);
 
-    const result = payload?.result;
-    // Prefer structured output, fall back to text content blocks.
-    if (result?.structuredContent?.result != null) {
-      return String(result.structuredContent.result);
-    }
-    const text = result?.content?.map((c: any) => c.text).filter(Boolean).join('\n');
-    return text ?? '';
+        if (payload?.error) {
+          throw new Error(`MCP ${name} error: ${JSON.stringify(payload.error)}`);
+        }
+
+        const result = payload?.result;
+        // Prefer structured output, fall back to text content blocks.
+        if (result?.structuredContent?.result != null) {
+          return String(result.structuredContent.result);
+        }
+        const text = result?.content?.map((c: any) => c.text).filter(Boolean).join('\n');
+        return text ?? '';
+      },
+    );
   }
 
   /** Accept both plain JSON and SSE ("data: {...}") framed responses. */

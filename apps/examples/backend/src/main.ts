@@ -1,7 +1,9 @@
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { CloudRunExceptionFilter } from './observability/cloud-run-exception.filter';
+import { CloudRunLogger, cloudRunRequestContextMiddleware } from './observability/cloud-run-logger';
 
 function appVersion(): string {
   return process.env.APP_VERSION ?? 'local';
@@ -20,7 +22,14 @@ function corsOrigins(): string[] {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const serviceName = process.env.K_SERVICE || 'crud-backend';
+  const logger = new CloudRunLogger(serviceName);
+  Logger.overrideLogger(logger);
+
+  const app = await NestFactory.create(AppModule, { logger });
+  app.useLogger(logger);
+  app.use(cloudRunRequestContextMiddleware());
+  app.useGlobalFilters(new CloudRunExceptionFilter(serviceName));
 
   app.setGlobalPrefix('api');
   app.enableCors({
@@ -49,7 +58,7 @@ async function bootstrap() {
 
   const port = Number(process.env.PORT ?? 8080);
   await app.listen(port, '0.0.0.0');
-  console.log(`Backend listening on port ${port}`);
+  new Logger('Bootstrap').log(`Backend listening on port ${port}`);
 }
 
 bootstrap();
