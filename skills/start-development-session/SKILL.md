@@ -21,6 +21,8 @@ Use this skill to establish the project baseline before doing work in this repos
 - Frontend work usually starts in `apps/examples/frontend/src/app/`.
 - Backend work usually starts in `apps/examples/backend/src/`.
 - Deployment work usually starts in `.github/workflows/`, `apps/examples/backend/Dockerfile`, `apps/examples/frontend/Dockerfile`, or `docs/google-infra-links.md`.
+- New application work should also read `skills/add-new-application/SKILL.md`.
+- Versioning changes should also read `docs/versioning/README.md`.
 - Cross-service API changes must keep backend DTO/service code and frontend model/service code aligned.
 
 Do not perform live GitHub or GCP operations unless the user asks for live validation or deployment.

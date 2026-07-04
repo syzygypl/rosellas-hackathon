@@ -62,6 +62,10 @@ jobs:
 
       - name: Build backend
         run: |
+          APP_VERSION="$(node -p "require('./package.json').version")"
+          BUILD_TIME="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          echo "APP_VERSION=$APP_VERSION" >> "$GITHUB_ENV"
+          echo "BUILD_TIME=$BUILD_TIME" >> "$GITHUB_ENV"
           npm ci
           npm run build:backend
 
@@ -101,7 +105,7 @@ jobs:
 
       - name: Resolve frontend CORS origin
         run: |
-          ENV_VARS="^@^GOOGLE_CLOUD_PROJECT=$PROJECT_ID"
+          ENV_VARS="^@^GOOGLE_CLOUD_PROJECT=$PROJECT_ID@APP_VERSION=$APP_VERSION@GIT_SHA=$GITHUB_SHA@BUILD_TIME=$BUILD_TIME"
 
           if FRONTEND_URL="$(gcloud run services describe "$FRONTEND_SERVICE" \
               --region "$REGION" \

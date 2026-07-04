@@ -69,7 +69,9 @@ jobs:
 
       - name: Build Angular frontend
         run: |
-          printf "export const environment = {\n  production: true,\n  apiUrl: '%s',\n};\n" "$API_URL" > apps/examples/frontend/src/environments/environment.prod.ts
+          APP_VERSION="$(node -p "require('./package.json').version")"
+          BUILD_TIME="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          printf "export const environment = {\n  production: true,\n  apiUrl: '%s',\n  appVersion: '%s',\n  buildSha: '%s',\n  buildTime: '%s',\n};\n" "$API_URL" "$APP_VERSION" "$GITHUB_SHA" "$BUILD_TIME" > apps/examples/frontend/src/environments/environment.prod.ts
           npm ci
           npm run build:frontend
 

@@ -39,6 +39,9 @@ npm run build:backend
 npm run build:frontend
 ```
 
+The frontend displays frontend and backend build metadata. The backend exposes the same metadata at `/api/version`, and Swagger is available at `/api/docs`.
+Versioning conventions for new applications are documented in [docs/versioning/README.md](docs/versioning/README.md).
+
 ## GitHub Actions Configuration
 
 Create these GitHub Actions repository variables:
@@ -61,7 +64,7 @@ Run `.github/workflows/infra-bootstrap.yml` manually once before the first deplo
 
 Current GCP links and resource URLs are documented in [docs/google-infra-links.md](docs/google-infra-links.md).
 
-AI agent startup skills are centralized in [skills/](skills/), with entry points for Codex, Cursor, and Claude documented in [docs/ai/README.md](docs/ai/README.md).
+AI agent startup skills are centralized in [skills/](skills/), with entry points for Codex, Cursor, and Claude documented in [docs/ai/README.md](docs/ai/README.md). Use [skills/add-new-application/SKILL.md](skills/add-new-application/SKILL.md) when adding another application to the monorepo.
 
 After that:
 
