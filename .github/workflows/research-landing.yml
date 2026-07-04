@@ -22,10 +22,9 @@ env:
   CLOUD_BUILD_SOURCE_BUCKET: ${{ vars.CLOUD_BUILD_SOURCE_BUCKET || 'crud-hackathon-ml-20260703-github-cloud-build-source' }}
   IMAGE_NAME: research-landing
   LANDING_SERVICE: research-landing
-  PROJECT_NUMBER: ${{ vars.GCP_PROJECT_NUMBER || '59918194944' }}
   REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
-  WORKSPACE_SERVICE: customer-portal
+  WORKSPACE_URL: https://app.idealab.expert
 
 jobs:
   deploy:
@@ -53,20 +52,6 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.PROJECT_ID }}
-
-      - name: Resolve workspace URL
-        run: |
-          if WORKSPACE_URL="$(gcloud run services describe "$WORKSPACE_SERVICE" \
-              --region "$REGION" \
-              --project "$PROJECT_ID" \
-              --format='value(status.url)' 2>/dev/null)"; then
-            echo "Resolved workspace URL: $WORKSPACE_URL"
-          else
-            WORKSPACE_URL="https://$WORKSPACE_SERVICE-$PROJECT_NUMBER.$REGION.run.app"
-            echo "Workspace service not found yet; using regional URL: $WORKSPACE_URL"
-          fi
-
-          echo "WORKSPACE_URL=$WORKSPACE_URL" >> "$GITHUB_ENV"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

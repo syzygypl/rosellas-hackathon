@@ -19,11 +19,9 @@ permissions:
 
 env:
   ARTIFACT_REPOSITORY: cloud-run-apps
-  BACKEND_SERVICE: general-ai-agent
   CLOUD_BUILD_SOURCE_BUCKET: ${{ vars.CLOUD_BUILD_SOURCE_BUCKET || 'crud-hackathon-ml-20260703-github-cloud-build-source' }}
   FRONTEND_SERVICE: customer-portal
   IMAGE_NAME: customer-portal
-  PROJECT_NUMBER: ${{ vars.GCP_PROJECT_NUMBER || '59918194944' }}
   REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
 
@@ -54,20 +52,6 @@ jobs:
         with:
           project_id: ${{ env.PROJECT_ID }}
 
-      - name: Resolve general-ai-agent URL
-        run: |
-          if BACKEND_URL="$(gcloud run services describe "$BACKEND_SERVICE" \
-              --region "$REGION" \
-              --project "$PROJECT_ID" \
-              --format='value(status.url)' 2>/dev/null)"; then
-            echo "Resolved backend URL: $BACKEND_URL"
-          else
-            BACKEND_URL="https://$BACKEND_SERVICE-$PROJECT_NUMBER.$REGION.run.app"
-            echo "Backend service not found yet; using regional URL: $BACKEND_URL"
-          fi
-
-          echo "API_URL=$BACKEND_URL/api" >> "$GITHUB_ENV"
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -79,6 +63,7 @@ jobs:
         run: |
           APP_VERSION="$(node -p "require('./package.json').version")"
           BUILD_TIME="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          API_URL="/api"
           printf "export const environment = {\n  production: true,\n  apiUrl: '%s',\n  appVersion: '%s',\n  buildSha: '%s',\n  buildTime: '%s',\n};\n" "$API_URL" "$APP_VERSION" "$GITHUB_SHA" "$BUILD_TIME" > apps/customer-portal/src/environments/environment.prod.ts
           npm ci
           npm run build:frontend

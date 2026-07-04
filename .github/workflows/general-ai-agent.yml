@@ -24,6 +24,7 @@ env:
   FRONTEND_SERVICE: customer-portal
   IMAGE_NAME: general-ai-agent
   MCP_SERVICE: triz-mcp-server
+  MCP_URL: ${{ vars.MCP_URL || '' }}
   SCAMPER_MCP_SERVICE: scamper-mcp-server
   PROJECT_NUMBER: ${{ vars.GCP_PROJECT_NUMBER || '59918194944' }}
   REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
@@ -108,7 +109,6 @@ jobs:
 
       - name: Resolve general-ai-agent environment
         run: |
-          MCP_URL="${{ vars.MCP_URL }}"
           if [ -n "$MCP_URL" ]; then
             echo "Using MCP_URL from repository variables."
           else
@@ -145,22 +145,32 @@ jobs:
           fi
 
           ENV_VARS="^@^MCP_URL=$MCP_URL@SCAMPER_MCP_URL=$SCAMPER_MCP_URL@GOOGLE_CLOUD_PROJECT=$PROJECT_ID@APP_VERSION=$APP_VERSION@GIT_SHA=$GITHUB_SHA@BUILD_TIME=$BUILD_TIME@LOG_LEVEL=INFO"
-          REGIONAL_FRONTEND_URL="https://$FRONTEND_SERVICE-$PROJECT_NUMBER.$REGION.run.app"
+          CORS_ORIGIN=""
+
+          append_cors_origin() {
+            local origin="$1"
+
+            if [ -z "$origin" ]; then
+              return
+            fi
+
+            if [ -n "$CORS_ORIGIN" ]; then
+              CORS_ORIGIN="$CORS_ORIGIN,$origin"
+            else
+              CORS_ORIGIN="$origin"
+            fi
+          }
 
           if FRONTEND_URL="$(gcloud run services describe "$FRONTEND_SERVICE" \
               --region "$REGION" \
               --project "$PROJECT_ID" \
               --format='value(status.url)' 2>/dev/null)"; then
-            if [ "$FRONTEND_URL" = "$REGIONAL_FRONTEND_URL" ]; then
-              CORS_ORIGIN="$FRONTEND_URL"
-            else
-              CORS_ORIGIN="$FRONTEND_URL,$REGIONAL_FRONTEND_URL"
-            fi
-          else
-            CORS_ORIGIN="$REGIONAL_FRONTEND_URL"
+            append_cors_origin "$FRONTEND_URL"
           fi
 
-          ENV_VARS="$ENV_VARS@CORS_ORIGIN=$CORS_ORIGIN"
+          if [ -n "$CORS_ORIGIN" ]; then
+            ENV_VARS="$ENV_VARS@CORS_ORIGIN=$CORS_ORIGIN"
+          fi
 
           # Deep Agent chat: optional — without a compatible key the backend
           # serves the LLM-free pipeline and returns a configuration warning.

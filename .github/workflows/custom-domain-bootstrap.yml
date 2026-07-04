@@ -1,0 +1,429 @@
+name: custom-domain-bootstrap
+
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: Root custom domain without scheme, for example example.com
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  BACKEND_SERVICE: general-ai-agent
+  DNS_ZONE: rosellas-main-dns
+  FRONTEND_SERVICE: customer-portal
+  LANDING_SERVICE: research-landing
+  LB_PREFIX: rosellas-main
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
+
+jobs:
+  bootstrap:
+    name: Bootstrap custom domain load balancer
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate configuration
+        run: |
+          test -n "$PROJECT_ID"
+          test -n "$REGION"
+          test -n "${{ vars.WIF_PROVIDER }}"
+          test -n "${{ vars.GCP_SERVICE_ACCOUNT }}"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Bootstrap load balancer
+        env:
+          CUSTOM_DOMAIN: ${{ inputs.domain }}
+        run: |
+          set -euo pipefail
+
+          CUSTOM_DOMAIN="${CUSTOM_DOMAIN%.}"
+
+          case "$CUSTOM_DOMAIN" in
+            http://*|https://*|*/*|"")
+              echo "domain must be a hostname without scheme or path" >&2
+              exit 1
+              ;;
+          esac
+
+          case "$CUSTOM_DOMAIN" in
+            www.*)
+              echo "domain must be the root domain, for example example.com. The workflow adds www automatically." >&2
+              exit 1
+              ;;
+          esac
+
+          case "$LB_PREFIX" in
+            ""|*[!a-z0-9-]*|*-)
+              echo "internal resource prefix must contain only lowercase letters, digits, and hyphens, and cannot end with hyphen" >&2
+              exit 1
+              ;;
+          esac
+
+          case "$LB_PREFIX" in
+            [a-z]*)
+              ;;
+            *)
+              echo "internal resource prefix must start with a lowercase letter" >&2
+              exit 1
+              ;;
+          esac
+
+          if [ "${#LB_PREFIX}" -gt 45 ]; then
+            echo "internal resource prefix must be 45 characters or shorter so derived GCP resource names fit name limits" >&2
+            exit 1
+          fi
+
+          case "$DNS_ZONE" in
+            ""|*[!a-z0-9-]*|*-)
+              echo "internal DNS zone name must contain only lowercase letters, digits, and hyphens, and cannot end with hyphen" >&2
+              exit 1
+              ;;
+          esac
+
+          case "$DNS_ZONE" in
+            [a-z]*)
+              ;;
+            *)
+              echo "internal DNS zone name must start with a lowercase letter" >&2
+              exit 1
+              ;;
+          esac
+
+          APP_DOMAIN="app.$CUSTOM_DOMAIN"
+          CERT_DOMAINS="$CUSTOM_DOMAIN,www.$CUSTOM_DOMAIN,$APP_DOMAIN"
+
+          NORMALIZED_CERT_DOMAINS=""
+          IFS=',' read -ra DOMAIN_NAMES <<< "$CERT_DOMAINS"
+          for DOMAIN_NAME in "${DOMAIN_NAMES[@]}"; do
+            DOMAIN_NAME="${DOMAIN_NAME%.}"
+
+            case "$DOMAIN_NAME" in
+              http://*|https://*|*/*|"")
+                echo "certificate domain must be a hostname without scheme or path" >&2
+                exit 1
+                ;;
+            esac
+
+            case "$DOMAIN_NAME" in
+              "$CUSTOM_DOMAIN"|*."$CUSTOM_DOMAIN")
+                ;;
+              *)
+                echo "certificate domain '$DOMAIN_NAME' must be inside Cloud DNS zone '$CUSTOM_DOMAIN'" >&2
+                exit 1
+                ;;
+            esac
+
+            if [ -z "$NORMALIZED_CERT_DOMAINS" ]; then
+              NORMALIZED_CERT_DOMAINS="$DOMAIN_NAME"
+            else
+              case ",$NORMALIZED_CERT_DOMAINS," in
+                *",$DOMAIN_NAME,"*)
+                  ;;
+                *)
+                NORMALIZED_CERT_DOMAINS="$NORMALIZED_CERT_DOMAINS,$DOMAIN_NAME"
+                ;;
+              esac
+            fi
+          done
+
+          CERT_DOMAINS="$NORMALIZED_CERT_DOMAINS"
+          HOSTS="$CUSTOM_DOMAIN,www.$CUSTOM_DOMAIN,$APP_DOMAIN"
+          DNS_NAME="$CUSTOM_DOMAIN."
+
+          IP_NAME="$LB_PREFIX-ip"
+          LANDING_NEG="$LB_PREFIX-landing-neg"
+          FRONTEND_NEG="$LB_PREFIX-frontend-neg"
+          BACKEND_NEG="$LB_PREFIX-backend-neg"
+          LANDING_BACKEND_SERVICE="$LB_PREFIX-landing-bs"
+          FRONTEND_BACKEND_SERVICE="$LB_PREFIX-frontend-bs"
+          BACKEND_BACKEND_SERVICE="$LB_PREFIX-backend-bs"
+          URL_MAP="$LB_PREFIX-url-map"
+          HTTP_REDIRECT_URL_MAP="$LB_PREFIX-http-map"
+          LANDING_PATH_MATCHER="$LB_PREFIX-landing-matcher"
+          APP_PATH_MATCHER="$LB_PREFIX-app-matcher"
+          CERT_NAME="$LB_PREFIX-cert"
+          HTTP_PROXY="$LB_PREFIX-http-proxy"
+          HTTPS_PROXY="$LB_PREFIX-https-proxy"
+          HTTP_RULE="$LB_PREFIX-http-rule"
+          HTTPS_RULE="$LB_PREFIX-https-rule"
+
+          gcloud services enable \
+            compute.googleapis.com \
+            dns.googleapis.com \
+            --project "$PROJECT_ID"
+
+          gcloud run services describe "$FRONTEND_SERVICE" \
+            --region "$REGION" \
+            --project "$PROJECT_ID" >/dev/null
+
+          gcloud run services describe "$LANDING_SERVICE" \
+            --region "$REGION" \
+            --project "$PROJECT_ID" >/dev/null
+
+          gcloud run services describe "$BACKEND_SERVICE" \
+            --region "$REGION" \
+            --project "$PROJECT_ID" >/dev/null
+
+          if ! gcloud compute addresses describe "$IP_NAME" \
+              --global \
+              --project "$PROJECT_ID" >/dev/null 2>&1; then
+            gcloud compute addresses create "$IP_NAME" \
+              --global \
+              --ip-version=IPV4 \
+              --network-tier=PREMIUM \
+              --project "$PROJECT_ID"
+          fi
+
+          LB_IP="$(gcloud compute addresses describe "$IP_NAME" \
+            --global \
+            --project "$PROJECT_ID" \
+            --format='value(address)')"
+
+          if ! gcloud dns managed-zones describe "$DNS_ZONE" \
+              --project "$PROJECT_ID" >/dev/null 2>&1; then
+            gcloud dns managed-zones create "$DNS_ZONE" \
+              --dns-name "$DNS_NAME" \
+              --description "Public DNS zone for $CUSTOM_DOMAIN" \
+              --visibility public \
+              --project "$PROJECT_ID"
+          else
+            EXISTING_DNS_NAME="$(gcloud dns managed-zones describe "$DNS_ZONE" \
+              --project "$PROJECT_ID" \
+              --format='value(dnsName)')"
+
+            if [ "$EXISTING_DNS_NAME" != "$DNS_NAME" ]; then
+              echo "Cloud DNS zone '$DNS_ZONE' exists for '$EXISTING_DNS_NAME', expected '$DNS_NAME'" >&2
+              exit 1
+            fi
+          fi
+
+          ensure_neg() {
+            local name="$1"
+            local service="$2"
+
+            if ! gcloud compute network-endpoint-groups describe "$name" \
+                --region "$REGION" \
+                --project "$PROJECT_ID" >/dev/null 2>&1; then
+              gcloud compute network-endpoint-groups create "$name" \
+                --region "$REGION" \
+                --network-endpoint-type=serverless \
+                --cloud-run-service="$service" \
+                --project "$PROJECT_ID"
+            else
+              echo "::warning::Serverless NEG '$name' already exists; this bootstrap does not change its target Cloud Run service."
+            fi
+          }
+
+          ensure_backend_service() {
+            local service_name="$1"
+            local neg_name="$2"
+
+            if ! gcloud compute backend-services describe "$service_name" \
+                --global \
+                --project "$PROJECT_ID" >/dev/null 2>&1; then
+              gcloud compute backend-services create "$service_name" \
+                --load-balancing-scheme=EXTERNAL_MANAGED \
+                --global \
+                --project "$PROJECT_ID"
+            fi
+
+            local neg_self_link
+            neg_self_link="$(gcloud compute network-endpoint-groups describe "$neg_name" \
+              --region "$REGION" \
+              --project "$PROJECT_ID" \
+              --format='value(selfLink)')"
+
+            if ! gcloud compute backend-services describe "$service_name" \
+                --global \
+                --project "$PROJECT_ID" \
+                --format='value(backends[].group)' | grep -F "$neg_self_link" >/dev/null; then
+              gcloud compute backend-services add-backend "$service_name" \
+                --global \
+                --network-endpoint-group="$neg_name" \
+                --network-endpoint-group-region="$REGION" \
+                --project "$PROJECT_ID"
+            fi
+          }
+
+          ensure_neg "$LANDING_NEG" "$LANDING_SERVICE"
+          ensure_neg "$FRONTEND_NEG" "$FRONTEND_SERVICE"
+          ensure_neg "$BACKEND_NEG" "$BACKEND_SERVICE"
+          ensure_backend_service "$LANDING_BACKEND_SERVICE" "$LANDING_NEG"
+          ensure_backend_service "$FRONTEND_BACKEND_SERVICE" "$FRONTEND_NEG"
+          ensure_backend_service "$BACKEND_BACKEND_SERVICE" "$BACKEND_NEG"
+
+          URL_MAP_FILE="$(mktemp)"
+          {
+            echo "name: $URL_MAP"
+            echo "defaultService: https://www.googleapis.com/compute/v1/projects/$PROJECT_ID/global/backendServices/$LANDING_BACKEND_SERVICE"
+            echo "hostRules:"
+            echo "- hosts:"
+            echo "  - $CUSTOM_DOMAIN"
+            echo "  - www.$CUSTOM_DOMAIN"
+            echo "  pathMatcher: $LANDING_PATH_MATCHER"
+            echo "- hosts:"
+            echo "  - $APP_DOMAIN"
+            echo "  pathMatcher: $APP_PATH_MATCHER"
+            echo "pathMatchers:"
+            echo "- defaultService: https://www.googleapis.com/compute/v1/projects/$PROJECT_ID/global/backendServices/$LANDING_BACKEND_SERVICE"
+            echo "  name: $LANDING_PATH_MATCHER"
+            echo "- defaultService: https://www.googleapis.com/compute/v1/projects/$PROJECT_ID/global/backendServices/$FRONTEND_BACKEND_SERVICE"
+            echo "  name: $APP_PATH_MATCHER"
+            echo "  pathRules:"
+            echo "  - paths:"
+            echo "    - /api"
+            echo "    - /api/*"
+            echo "    service: https://www.googleapis.com/compute/v1/projects/$PROJECT_ID/global/backendServices/$BACKEND_BACKEND_SERVICE"
+          } > "$URL_MAP_FILE"
+
+          gcloud compute url-maps import "$URL_MAP" \
+            --source "$URL_MAP_FILE" \
+            --global \
+            --project "$PROJECT_ID" \
+            --quiet
+
+          if ! gcloud compute ssl-certificates describe "$CERT_NAME" \
+              --global \
+              --project "$PROJECT_ID" >/dev/null 2>&1; then
+            gcloud compute ssl-certificates create "$CERT_NAME" \
+              --domains "$CERT_DOMAINS" \
+              --global \
+              --project "$PROJECT_ID"
+          else
+            echo "::warning::SSL certificate '$CERT_NAME' already exists; domain changes require manual certificate replacement."
+          fi
+
+          REDIRECT_MAP_FILE="$(mktemp)"
+          {
+            echo "name: $HTTP_REDIRECT_URL_MAP"
+            echo "defaultUrlRedirect:"
+            echo "  redirectResponseCode: MOVED_PERMANENTLY_DEFAULT"
+            echo "  httpsRedirect: true"
+            echo "tests:"
+            echo "- description: HTTP root redirect"
+            echo "  host: $CUSTOM_DOMAIN"
+            echo "  path: /"
+            echo "  expectedOutputUrl: https://$CUSTOM_DOMAIN/"
+            echo "  expectedRedirectResponseCode: 301"
+            echo "- description: HTTP app redirect"
+            echo "  host: $APP_DOMAIN"
+            echo "  path: /"
+            echo "  expectedOutputUrl: https://$APP_DOMAIN/"
+            echo "  expectedRedirectResponseCode: 301"
+          } > "$REDIRECT_MAP_FILE"
+
+          gcloud compute url-maps import "$HTTP_REDIRECT_URL_MAP" \
+            --source "$REDIRECT_MAP_FILE" \
+            --global \
+            --project "$PROJECT_ID" \
+            --quiet
+
+          if ! gcloud compute target-http-proxies describe "$HTTP_PROXY" \
+              --global \
+              --project "$PROJECT_ID" >/dev/null 2>&1; then
+            gcloud compute target-http-proxies create "$HTTP_PROXY" \
+              --url-map "$HTTP_REDIRECT_URL_MAP" \
+              --global \
+              --project "$PROJECT_ID"
+          else
+            gcloud compute target-http-proxies update "$HTTP_PROXY" \
+              --url-map "$HTTP_REDIRECT_URL_MAP" \
+              --global \
+              --project "$PROJECT_ID"
+          fi
+
+          if ! gcloud compute target-https-proxies describe "$HTTPS_PROXY" \
+              --global \
+              --project "$PROJECT_ID" >/dev/null 2>&1; then
+            gcloud compute target-https-proxies create "$HTTPS_PROXY" \
+              --ssl-certificates "$CERT_NAME" \
+              --url-map "$URL_MAP" \
+              --global \
+              --project "$PROJECT_ID"
+          else
+            gcloud compute target-https-proxies update "$HTTPS_PROXY" \
+              --url-map "$URL_MAP" \
+              --global \
+              --project "$PROJECT_ID"
+          fi
+
+          if ! gcloud compute forwarding-rules describe "$HTTP_RULE" \
+              --global \
+              --project "$PROJECT_ID" >/dev/null 2>&1; then
+            gcloud compute forwarding-rules create "$HTTP_RULE" \
+              --load-balancing-scheme=EXTERNAL_MANAGED \
+              --network-tier=PREMIUM \
+              --address "$LB_IP" \
+              --target-http-proxy "$HTTP_PROXY" \
+              --global \
+              --ports=80 \
+              --project "$PROJECT_ID"
+          fi
+
+          if ! gcloud compute forwarding-rules describe "$HTTPS_RULE" \
+              --global \
+              --project "$PROJECT_ID" >/dev/null 2>&1; then
+            gcloud compute forwarding-rules create "$HTTPS_RULE" \
+              --load-balancing-scheme=EXTERNAL_MANAGED \
+              --network-tier=PREMIUM \
+              --address "$LB_IP" \
+              --target-https-proxy "$HTTPS_PROXY" \
+              --global \
+              --ports=443 \
+              --project "$PROJECT_ID"
+          fi
+
+          IFS=',' read -ra DNS_RECORD_NAMES <<< "$CERT_DOMAINS"
+          for DNS_RECORD_NAME in "${DNS_RECORD_NAMES[@]}"; do
+            if gcloud dns record-sets describe "$DNS_RECORD_NAME." \
+                --type A \
+                --zone "$DNS_ZONE" \
+                --project "$PROJECT_ID" >/dev/null 2>&1; then
+              gcloud dns record-sets update "$DNS_RECORD_NAME." \
+                --type A \
+                --ttl 300 \
+                --rrdatas "$LB_IP" \
+                --zone "$DNS_ZONE" \
+                --project "$PROJECT_ID"
+            else
+              gcloud dns record-sets create "$DNS_RECORD_NAME." \
+                --type A \
+                --ttl 300 \
+                --rrdatas "$LB_IP" \
+                --zone "$DNS_ZONE" \
+                --project "$PROJECT_ID"
+            fi
+          done
+
+          NAME_SERVERS="$(gcloud dns managed-zones describe "$DNS_ZONE" \
+            --project "$PROJECT_ID" \
+            --format='value(nameServers[])')"
+
+          echo "Load balancer IP: $LB_IP"
+          echo "Cloud DNS zone: $DNS_ZONE ($DNS_NAME)"
+          echo "A records in Cloud DNS now point to $LB_IP: $CERT_DOMAINS"
+          echo "Set these NS records at your domain registrar for $CUSTOM_DOMAIN:"
+          echo "$NAME_SERVERS"
+          echo "URL map hosts configured for routing: $HOSTS"
+          echo "HTTPS routing: https://$CUSTOM_DOMAIN/ -> $LANDING_SERVICE, https://$APP_DOMAIN/ -> $FRONTEND_SERVICE, https://$APP_DOMAIN/api/* -> $BACKEND_SERVICE"
+          echo "HTTP requests on port 80 redirect to HTTPS."
+          echo "Google-managed certificate '$CERT_NAME' can become ACTIVE after registrar NS delegation reaches Cloud DNS."
