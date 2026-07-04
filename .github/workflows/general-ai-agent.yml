@@ -190,6 +190,9 @@ jobs:
             ENV_VARS="$ENV_VARS@OPENAI_API_KEY=$OPENAI_COMPATIBLE_API_KEY"
             ENV_VARS="$ENV_VARS@OPENAI_MODEL=${{ vars.OPENAI_MODEL || 'gpt-5.5' }}"
             ENV_VARS="$ENV_VARS@OPENAI_REASONING_EFFORT=${{ vars.OPENAI_REASONING_EFFORT || 'low' }}"
+            ENV_VARS="$ENV_VARS@VOICE_STT_MODEL=${{ vars.VOICE_STT_MODEL || 'gpt-4o-transcribe' }}"
+            ENV_VARS="$ENV_VARS@VOICE_TTS_MODEL=${{ vars.VOICE_TTS_MODEL || 'gpt-4o-mini-tts' }}"
+            ENV_VARS="$ENV_VARS@VOICE_TTS_VOICE=${{ vars.VOICE_TTS_VOICE || 'alloy' }}"
           else
             echo "No OpenAI-compatible API key secret set; deploying without the Deep Agent chat."
           fi

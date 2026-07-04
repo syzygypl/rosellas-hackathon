@@ -251,6 +251,26 @@ h1 {
   outline: none;
 }
 
+.composer .mic {
+  flex: none;
+  align-self: flex-end;
+}
+
+.mic-active {
+  border-color: var(--color-accent);
+  animation: mic-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes mic-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--color-accent) 0%, transparent);
+  }
+}
+
 /* --- Solutions panel --- */
 
 .solutions {

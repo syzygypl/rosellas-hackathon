@@ -17,6 +17,11 @@
       >
         Nowy problem
       </button>
+      @if (voiceMode()) {
+        <span class="label status voice-status" [class.status-busy]="voiceState() !== 'listening'">
+          {{ voiceStateLabel() }}
+        </span>
+      }
       <span class="label status" [class.status-busy]="loading()">
         {{ loading() ? 'Myślę…' : 'Gotowy' }}
       </span>
@@ -69,6 +74,17 @@
           placeholder="Opisz problem lub dopytaj…"
           [disabled]="loading()"
         ></textarea>
+        <button
+          type="button"
+          class="btn btn-lg mic"
+          [class.mic-active]="voiceMode()"
+          [attr.aria-pressed]="voiceMode()"
+          (click)="toggleVoice()"
+          [title]="voiceMode() ? 'Wyłącz tryb głosowy' : 'Włącz tryb głosowy'"
+          aria-label="Tryb głosowy"
+        >
+          🎤
+        </button>
         <button type="submit" class="btn btn-lg" [disabled]="loading() || !input.trim()">Wyślij</button>
       </form>
     </main>

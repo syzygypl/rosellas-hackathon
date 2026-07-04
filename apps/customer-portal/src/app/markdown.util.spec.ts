@@ -1,4 +1,4 @@
-import { escapeHtml, renderMarkdownHtml } from './markdown.util';
+import { escapeHtml, renderMarkdownHtml, stripMarkdownToPlainText } from './markdown.util';
 
 describe('escapeHtml', () => {
   it('escapes &, < and >', () => {
@@ -31,5 +31,28 @@ describe('renderMarkdownHtml', () => {
       'akapit pierwszy<br><br>akapit drugi',
     );
     expect(renderMarkdownHtml('linia\ndruga')).toBe('linia<br>druga');
+  });
+});
+
+describe('stripMarkdownToPlainText', () => {
+  it('unwraps headers, bold, code, links and list markers', () => {
+    expect(
+      stripMarkdownToPlainText('## Tytuł\n**mocna** teza z `kodem`\n- pierwszy\n1. drugi'),
+    ).toBe('Tytuł mocna teza z kodem pierwszy drugi');
+    expect(stripMarkdownToPlainText('Zobacz [dokument](https://example.com).')).toBe(
+      'Zobacz dokument.',
+    );
+  });
+
+  it('removes emoji and table pipes', () => {
+    expect(stripMarkdownToPlainText('Cześć! 👋 Zaczynajmy 🚀')).toBe('Cześć! Zaczynajmy');
+    expect(stripMarkdownToPlainText('| a | b |')).toBe('a b');
+  });
+
+  it('joins paragraphs into sentence pauses without doubling punctuation', () => {
+    expect(stripMarkdownToPlainText('Pierwszy akapit.\n\nDrugi akapit')).toBe(
+      'Pierwszy akapit. Drugi akapit',
+    );
+    expect(stripMarkdownToPlainText('bez kropki\n\ndalszy ciąg')).toBe('bez kropki. dalszy ciąg');
   });
 });

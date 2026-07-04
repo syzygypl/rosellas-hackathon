@@ -5,9 +5,18 @@ import { TrizMcpService } from './triz-mcp.service';
 import { AgentService } from './agent.service';
 import { ChatService } from './chat.service';
 import { LangfuseTracingService } from './langfuse-tracing.service';
+import { VoiceController } from './voice.controller';
+import { VoiceService } from './voice.service';
 
 @Module({
-  controllers: [SolverController],
-  providers: [SolverService, TrizMcpService, AgentService, ChatService, LangfuseTracingService],
+  controllers: [SolverController, VoiceController],
+  providers: [
+    SolverService,
+    TrizMcpService,
+    AgentService,
+    ChatService,
+    LangfuseTracingService,
+    VoiceService,
+  ],
 })
 export class AppModule {}

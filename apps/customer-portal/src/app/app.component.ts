@@ -3,16 +3,21 @@ import {
   AfterViewChecked,
   Component,
   ElementRef,
+  OnDestroy,
   ViewChild,
+  computed,
   inject,
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { HttpErrorResponse } from '@angular/common/http';
+import { Subscription } from 'rxjs';
 import { ChatMessage, ChatSolution } from './models/chat.model';
 import { ChatApiService } from './services/chat-api.service';
-import { escapeHtml, renderMarkdownHtml } from './markdown.util';
+import { VoiceApiService } from './services/voice-api.service';
+import { VoiceCaptureService } from './services/voice-capture.service';
+import { escapeHtml, renderMarkdownHtml, stripMarkdownToPlainText } from './markdown.util';
 
 interface Bubble {
   cls: 'user' | 'bot';
@@ -72,6 +77,16 @@ const PROGRESS_STATUSES = [
 ];
 const PROGRESS_STEP_MS = 7000;
 
+/** Voice-mode phases; the mic records only in 'listening'. */
+type VoiceState = 'off' | 'listening' | 'transcribing' | 'thinking' | 'speaking';
+
+const VOICE_STATE_LABELS: Record<Exclude<VoiceState, 'off'>, string> = {
+  listening: 'Słucham…',
+  transcribing: 'Rozpoznaję…',
+  thinking: 'Myślę…',
+  speaking: 'Mówię…',
+};
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -79,8 +94,10 @@ const PROGRESS_STEP_MS = 7000;
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
-export class AppComponent implements AfterViewChecked {
+export class AppComponent implements AfterViewChecked, OnDestroy {
   private readonly chatApi = inject(ChatApiService);
+  private readonly voiceApi = inject(VoiceApiService);
+  private readonly capture = inject(VoiceCaptureService);
   private readonly sanitizer = inject(DomSanitizer);
 
   @ViewChild('messagesBox') private messagesBox?: ElementRef<HTMLElement>;
@@ -92,6 +109,8 @@ export class AppComponent implements AfterViewChecked {
   toasts = signal<Toast[]>([]);
   loading = signal(false);
   loadingStatus = signal('');
+  voiceState = signal<VoiceState>('off');
+  voiceMode = computed(() => this.voiceState() !== 'off');
   sessionId = this.loadSessionId();
 
   /** Full conversation history, sent to the backend on every turn. */
@@ -100,6 +119,8 @@ export class AppComponent implements AfterViewChecked {
   private nextToastId = 0;
   private shouldScroll = false;
   private statusTimer: ReturnType<typeof setInterval> | null = null;
+  private player: HTMLAudioElement | null = null;
+  private utteranceSub: Subscription | null = null;
 
   constructor() {
     if (!this.restore()) {
@@ -113,6 +134,10 @@ export class AppComponent implements AfterViewChecked {
       el.scrollTop = el.scrollHeight;
       this.shouldScroll = false;
     }
+  }
+
+  ngOnDestroy(): void {
+    this.stopVoiceMode();
   }
 
   onEnter(event: Event): void {
@@ -139,9 +164,117 @@ export class AppComponent implements AfterViewChecked {
     this.dispatch();
   }
 
+  /** Toggle hands-free voice mode; the click is the gesture that unlocks audio. */
+  async toggleVoice(): Promise<void> {
+    if (this.voiceMode()) {
+      this.stopVoiceMode();
+      return;
+    }
+    this.player ??= new Audio();
+    this.player.play().catch(() => undefined); // unlock playback within the gesture
+    try {
+      await this.capture.enable();
+    } catch {
+      this.showToast(
+        'error',
+        'Tryb głosowy',
+        'Brak dostępu do mikrofonu. Sprawdź uprawnienia przeglądarki i spróbuj ponownie.',
+      );
+      return;
+    }
+    this.utteranceSub = this.capture.utterance$.subscribe((blob) => this.onUtterance(blob));
+    this.capture.startListening();
+    this.voiceState.set('listening');
+  }
+
+  voiceStateLabel(): string {
+    const state = this.voiceState();
+    return state === 'off' ? '' : VOICE_STATE_LABELS[state];
+  }
+
+  private stopVoiceMode(): void {
+    this.voiceState.set('off');
+    this.utteranceSub?.unsubscribe();
+    this.utteranceSub = null;
+    this.capture.disable();
+    if (this.player) {
+      this.player.pause();
+      this.player.removeAttribute('src');
+    }
+  }
+
+  private onUtterance(blob: Blob): void {
+    if (!this.voiceMode()) {
+      return;
+    }
+    this.voiceState.set('transcribing');
+    this.voiceApi.transcribe(blob).subscribe({
+      next: ({ text }) => {
+        const spoken = (text || '').trim();
+        if (!spoken || this.loading()) {
+          this.resumeListening();
+          return;
+        }
+        this.voiceState.set('thinking');
+        this.sendText(spoken);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.showToast('error', 'Tryb głosowy', this.errorDetail(err));
+        // Without an OpenAI key every attempt fails the same way — leave voice mode.
+        if (err.status === 503) {
+          this.stopVoiceMode();
+        } else {
+          this.resumeListening();
+        }
+      },
+    });
+  }
+
+  private speakAnswer(answer: string): void {
+    const text = stripMarkdownToPlainText(answer);
+    if (!text || !this.player) {
+      this.resumeListening();
+      return;
+    }
+    this.voiceState.set('speaking');
+    this.voiceApi.speak(text).subscribe({
+      next: (blob) => {
+        if (!this.voiceMode() || !this.player) {
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        const player = this.player;
+        const done = () => {
+          URL.revokeObjectURL(url);
+          this.resumeListening();
+        };
+        player.onended = done;
+        player.onerror = done;
+        player.src = url;
+        player.play().catch(done);
+      },
+      error: () => {
+        this.showToast('warning', 'Tryb głosowy', 'Nie udało się odczytać odpowiedzi na głos.');
+        this.resumeListening();
+      },
+    });
+  }
+
+  private resumeListening(): void {
+    if (!this.voiceMode()) {
+      return;
+    }
+    this.capture.startListening();
+    this.voiceState.set('listening');
+  }
+
   resetChat(): void {
     if (this.loading()) {
       return;
+    }
+    if (this.voiceMode()) {
+      this.player?.pause();
+      this.resumeListening();
     }
     this.history = [];
     this.nextId = 0;
@@ -203,20 +336,28 @@ export class AppComponent implements AfterViewChecked {
           solutionId,
           suggestions: result.suggestions?.filter((s) => s.trim()),
         });
+        if (this.voiceMode()) {
+          this.speakAnswer(answer);
+        }
       },
       error: (err: HttpErrorResponse) => {
         this.finishRequest();
-        const detail =
-          typeof err.error === 'object' && err.error?.message
-            ? String(err.error.message)
-            : err.message;
-        this.showToast('error', 'Błąd żądania', detail);
+        this.showToast('error', 'Błąd żądania', this.errorDetail(err));
         // The user message stays in history, so the retry has full context.
         const notice = 'Nie udało się uzyskać odpowiedzi.';
         this.addBubble({ cls: 'bot', raw: notice, html: notice, retry: true });
+        if (this.voiceMode()) {
+          this.resumeListening();
+        }
       },
     });
     this.shouldScroll = true;
+  }
+
+  private errorDetail(err: HttpErrorResponse): string {
+    return typeof err.error === 'object' && err.error?.message
+      ? String(err.error.message)
+      : err.message;
   }
 
   private finishRequest(): void {

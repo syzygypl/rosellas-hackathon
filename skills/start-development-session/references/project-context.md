@@ -128,6 +128,9 @@ Backend environment:
 - `MCP_URL`: TRIZ MCP server URL, defaults to `http://localhost:8123/mcp`.
 - `SCAMPER_MCP_URL`: SCAMPER MCP server URL, defaults to `http://localhost:8124/mcp`. The Deep Agent loads SCAMPER tools best-effort — when the server is unreachable at agent build time, the chat runs TRIZ-only until restart.
 - `OPENAI_API_KEY`: optional OpenAI-compatible key for the Deep Agent chat. The backend also accepts `EMBEDDING_API_KEY` and legacy `OPEN_AI_API_KEY` as fallbacks, and maps the chosen key to LangChain.
+- `VOICE_STT_MODEL`: OpenAI transcription model for `/api/voice/transcribe`; defaults to `gpt-4o-transcribe`.
+- `VOICE_TTS_MODEL`: OpenAI text-to-speech model for `/api/voice/speak`; defaults to `gpt-4o-mini-tts`.
+- `VOICE_TTS_VOICE`: OpenAI TTS voice name; defaults to `alloy`. The voice endpoints reuse the chat key resolution and return 503 when no key is set.
 - `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY`: optional; when both are set, the backend exports Langfuse traces for `/api/chat`, `/api/agent/solve`, `/api/solve`, LangChain model/agent calls, and Nest-side MCP tool calls.
 - `LANGFUSE_BASE_URL`: defaults to `https://cloud.langfuse.com`.
 - `LANGFUSE_TRACING_ENVIRONMENT`: optional Langfuse environment label; use `local` locally and a deployed label such as `production` in Cloud Run.
@@ -147,6 +150,7 @@ Frontend environment:
 - Local Angular env points to `http://localhost:8080/api`.
 - Local Angular env includes `appVersion`, `buildSha`, and `buildTime` fields used by the UI version badge.
 - The customer portal creates a per-browser-tab chat `sessionId`, displays it as muted copyable text at the bottom of the chat, and sends it with every `/api/chat` request.
+- The customer portal has a hands-free voice mode (🎤 toggle in the composer): the mic records until a client-side voice-activity detector hears end of speech, the recording goes to `/api/voice/transcribe`, the transcript flows through the normal `/api/chat` turn, the full answer (markdown stripped) is spoken via `/api/voice/speak`, and listening resumes automatically until the toggle is switched off. The mic never records while the app transcribes, thinks, or speaks.
 - Frontend deploy workflows resolve the paired backend Cloud Run URL and rewrite the app production environment with `<backend-url>/api` plus frontend build metadata during the CI build.
 - Static frontend nginx images emit `Strict-Transport-Security: max-age=31536000; includeSubDomains` so browsers keep the custom domains on HTTPS after the first secure visit.
 
@@ -192,6 +196,8 @@ AI agent backend (`apps/general-ai-agent`, consumed by `apps/customer-portal`):
 | `POST` | `/api/chat` | Conversational solver running both TRIZ and SCAMPER, picking the single best solution. Body: `{ sessionId?, messages: [{ role, content, solved? }] }` (max 40 messages, 8000 chars each). Returns `{ answer, engine, solution, suggestions?, warning? }`; `solution` leads with the winner (`bestDirection`, `whyBest`, `method`, `methodRationale`) and keeps runner-up `directions` viewable, plus the humanized card (`title`, `summary`, `contradiction`, `nextSteps`) and technical details (`parameters`, `principles`, `related`, `trail`, `report?`). |
 | `POST` | `/api/solve` | LLM-free deterministic TRIZ pipeline. Body: `{ problem }`. |
 | `POST` | `/api/agent/solve` | One-shot Deep Agent solve. Body: `{ problem }`; requires `OPENAI_API_KEY`. |
+| `POST` | `/api/voice/transcribe` | Speech-to-text for voice mode. Multipart body with an `audio` file field (webm/mp4/ogg, max 15 MB). Returns `{ text }`; 503 without an OpenAI key. |
+| `POST` | `/api/voice/speak` | Text-to-speech for voice mode. Body: `{ text }` (truncated to 4096 chars). Returns `audio/mpeg` bytes; 503 without an OpenAI key. |
 
 Example CRUD backend (`apps/examples/backend`):
 

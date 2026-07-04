@@ -214,6 +214,11 @@ export class AgentService {
     return Boolean(this.openAiApiKey);
   }
 
+  /** Resolved OpenAI-compatible key ('' when unconfigured). */
+  openAiKey(): string {
+    return this.openAiApiKey;
+  }
+
   configurationError(): string {
     return [
       `OpenAI agent is disabled because none of ${OPENAI_API_KEY_ENV_NAMES.join(', ')} is set.`,

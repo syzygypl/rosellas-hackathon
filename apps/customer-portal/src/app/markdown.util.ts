@@ -7,6 +7,28 @@ export function escapeHtml(value: string): string {
 }
 
 /**
+ * Flatten bot markdown to plain speakable text for TTS: the same minimal
+ * dialect renderMarkdownHtml handles, plus links, emoji and table pipes.
+ */
+export function stripMarkdownToPlainText(value: string): string {
+  let text = (value ?? '')
+    .replace(/^#{1,3} +/gm, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/^\s*(?:[-•*]|\d+\.) +/gm, '')
+    .replace(/^\s*>+ ?/gm, '')
+    .replace(/\|/g, ' ')
+    .replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, '');
+  // Paragraph breaks become sentence pauses; avoid doubling end punctuation.
+  text = text
+    .replace(/([.!?…:])\s*\n{2,}/g, '$1 ')
+    .replace(/\n{2,}/g, '. ')
+    .replace(/\n/g, ' ');
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+/**
  * Minimal markdown for bot answers: headers, bold, code, bullet lists.
  * The source is escaped first, so the output contains only tags produced here.
  */
