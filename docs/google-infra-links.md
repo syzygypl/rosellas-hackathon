@@ -88,6 +88,7 @@ Ostatnie smoke buildy:
 | Provider resource | `projects/59918194944/locations/global/workloadIdentityPools/github/providers/github` |
 | Provider condition | `assertion.repository == 'syzygypl/rosellas-hackathon'` |
 | Cloud Build source bucket roles | `roles/storage.objectAdmin`, `roles/storage.legacyBucketReader` on `gs://crud-hackathon-ml-20260703_cloudbuild` |
+| WIF quota project role | `roles/serviceusage.serviceUsageConsumer` for `principalSet://iam.googleapis.com/projects/59918194944/locations/global/workloadIdentityPools/github/attribute.repository/syzygypl/rosellas-hackathon` |
 
 Role nadane `github-deployer`:
 
