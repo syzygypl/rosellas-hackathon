@@ -101,23 +101,32 @@ jobs:
           EMBEDDING_MODEL: ${{ vars.EMBEDDING_MODEL || 'text-embedding-3-small' }}
           EMBEDDING_SERVICE_URL: ${{ vars.EMBEDDING_SERVICE_URL || 'https://api.openai.com/v1' }}
         run: |
+          MCP_STATUS_URL="$(gcloud run services describe "$MCP_SERVICE" \
+            --region "$REGION" \
+            --project "$PROJECT_ID" \
+            --format='value(status.url)' 2>/dev/null || true)"
+          MCP_STATUS_HOST="${MCP_STATUS_URL#https://}"
+          export MCP_STATUS_HOST
+
           python3 - <<'PY'
           import json
           import os
           from pathlib import Path
 
+          allowed_hosts = [
+              "localhost",
+              "localhost:*",
+              "127.0.0.1",
+              "127.0.0.1:*",
+              f"{os.environ['MCP_SERVICE']}-{os.environ['PROJECT_NUMBER']}.{os.environ['REGION']}.run.app",
+          ]
+          if os.environ.get("MCP_STATUS_HOST"):
+              allowed_hosts.append(os.environ["MCP_STATUS_HOST"])
+
           values = {
               "MCP_HOST": "0.0.0.0",
               "MCP_PORT": "8080",
-              "MCP_ALLOWED_HOSTS": ",".join(
-                  [
-                      "localhost",
-                      "localhost:*",
-                      "127.0.0.1",
-                      "127.0.0.1:*",
-                      f"{os.environ['MCP_SERVICE']}-{os.environ['PROJECT_NUMBER']}.{os.environ['REGION']}.run.app",
-                  ]
-              ),
+              "MCP_ALLOWED_HOSTS": ",".join(dict.fromkeys(allowed_hosts)),
               "EMBEDDING_MODEL": os.environ["EMBEDDING_MODEL"],
               "EMBEDDING_SERVICE_URL": os.environ["EMBEDDING_SERVICE_URL"],
               "EMBEDDING_API_KEY": os.environ["EMBEDDING_API_KEY"],

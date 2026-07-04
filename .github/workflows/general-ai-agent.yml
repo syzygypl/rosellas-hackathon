@@ -117,12 +117,12 @@ jobs:
                 --project "$PROJECT_ID" \
                 --format='value(status.url)' 2>/dev/null)"; then
               echo "Resolved MCP service URL: $MCP_SERVICE_URL"
+              echo "Using regional MCP URL: $REGIONAL_MCP_URL"
             else
-              MCP_SERVICE_URL="$REGIONAL_MCP_URL"
-              echo "MCP service not found yet; using regional URL: $MCP_SERVICE_URL"
+              echo "MCP service not found yet; using regional URL: $REGIONAL_MCP_URL"
             fi
 
-            MCP_URL="${MCP_SERVICE_URL%/}/mcp"
+            MCP_URL="${REGIONAL_MCP_URL%/}/mcp"
           fi
 
           ENV_VARS="^@^MCP_URL=$MCP_URL@GOOGLE_CLOUD_PROJECT=$PROJECT_ID@APP_VERSION=$APP_VERSION@GIT_SHA=$GITHUB_SHA@BUILD_TIME=$BUILD_TIME"
