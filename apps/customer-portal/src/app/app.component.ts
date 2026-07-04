@@ -36,7 +36,7 @@ interface SolutionCard {
 
 interface Toast {
   id: number;
-  kind: 'warning' | 'error';
+  kind: 'info' | 'warning' | 'error';
   title: string;
   body: string;
 }
@@ -278,6 +278,7 @@ export class AppComponent implements AfterViewChecked {
       document.execCommand('copy');
       input.remove();
     }
+    this.showToast('info', 'Session id copied', this.sessionId);
   }
 
   engineLabel(engine: 'agent' | 'pipeline'): string {
