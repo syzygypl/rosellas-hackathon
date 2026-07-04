@@ -74,28 +74,27 @@ export class ChatService {
   // --- Agent path -----------------------------------------------------------
 
   private async agentChat(messages: ChatMessage[], lastUserContent: string): Promise<ChatResult> {
-    // Guided intake: until the problem is understood (or 3 questions were asked),
-    // a cheap gate call either lets the solver run or returns ONE clarifying question.
-    const questionsAsked = messages.filter((m) => m.role === 'assistant').length;
-    if (questionsAsked < 3) {
-      const intake = await this.agent.intake(messages);
-      if (!intake.complete && intake.question) {
-        return { answer: intake.question, engine: 'agent', solution: null };
-      }
+    // Guided intake: a cheap gate call either lets the solver run or returns
+    // ONE clarifying/confirmation question.
+    const intake = await this.agent.intake(messages);
+    if (!intake.complete && intake.question) {
+      return { answer: intake.question, engine: 'agent', solution: null };
     }
 
     const { answer, toolCalls } = await this.agent.chat(messages);
 
-    // Keep the chat conversational: a long solve report goes to the side panel
-    // in full, while the chat bubble gets a compressed summary.
+    // Keep the chat conversational: tool-backed solve reports go to the side
+    // panel in full, while the chat bubble gets a compact summary.
     let chatAnswer = answer;
     let report: string | undefined;
-    if (toolCalls.length && answer.split(/\s+/).length > 130) {
+    if (toolCalls.length) {
+      report = answer;
       try {
         chatAnswer = await this.agent.summarize(answer);
-        report = answer;
       } catch (err) {
-        this.logger.warn(`Report summarization failed, sending full answer: ${err}`);
+        this.logger.warn(`Report summarization failed, sending fallback summary: ${err}`);
+        chatAnswer =
+          'Pełny raport jest w panelu rozwiązań obok. Który kierunek chcesz rozwinąć?';
       }
     }
 
