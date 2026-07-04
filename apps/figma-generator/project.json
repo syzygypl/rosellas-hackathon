@@ -1,0 +1,38 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "figma-generator",
+  "projectType": "application",
+  "root": "apps/figma-generator",
+  "sourceRoot": "apps/figma-generator",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": [
+        "{workspaceRoot}/dist/apps/figma-generator/figma-plugin"
+      ],
+      "inputs": [
+        "default",
+        "{workspaceRoot}/design-system/tokens/**/*",
+        "{workspaceRoot}/design-system/figma/**/*",
+        "{workspaceRoot}/tools/design-system/**/*"
+      ],
+      "options": {
+        "cwd": ".",
+        "command": "node tools/design-system/build-figma-plugin.mjs --out-dir dist/apps/figma-generator/figma-plugin"
+      }
+    },
+    "validate": {
+      "executor": "nx:run-commands",
+      "inputs": [
+        "default",
+        "{workspaceRoot}/design-system/tokens/**/*",
+        "{workspaceRoot}/design-system/figma/**/*",
+        "{workspaceRoot}/tools/design-system/**/*"
+      ],
+      "options": {
+        "cwd": ".",
+        "command": "node tools/design-system/validate-design-system.mjs"
+      }
+    }
+  }
+}

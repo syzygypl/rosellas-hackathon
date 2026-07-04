@@ -1,0 +1,209 @@
+{
+  "name": "Rosellas Idealab UI Kit",
+  "version": "0.1.0",
+  "figmaPages": [
+    {
+      "name": "Rosellas · Design System",
+      "purpose": "Single-page UI kit containing cover, foundations, components, patterns, and example screen sections for Figma files with page limits."
+    }
+  ],
+  "textStyles": [
+    {
+      "name": "Display/Hero",
+      "family": "Cormorant Garamond",
+      "weight": "Semibold",
+      "size": 64,
+      "lineHeight": 0.95,
+      "letterSpacing": "-3%"
+    },
+    {
+      "name": "Display/Hero Italic",
+      "family": "Cormorant Garamond",
+      "weight": "Regular Italic",
+      "size": 56,
+      "lineHeight": 1,
+      "letterSpacing": "-2%"
+    },
+    {
+      "name": "Heading/Card Title",
+      "family": "Cormorant Garamond",
+      "weight": "Medium",
+      "size": 22,
+      "lineHeight": 1.1,
+      "letterSpacing": "0"
+    },
+    {
+      "name": "Body/Large",
+      "family": "Inter",
+      "weight": "Regular",
+      "size": 17,
+      "lineHeight": 1.55,
+      "letterSpacing": "0"
+    },
+    {
+      "name": "Body/Regular",
+      "family": "Inter",
+      "weight": "Regular",
+      "size": 16,
+      "lineHeight": 1.6,
+      "letterSpacing": "0"
+    },
+    {
+      "name": "Label/Uppercase",
+      "family": "Inter",
+      "weight": "Bold",
+      "size": 11,
+      "lineHeight": 1,
+      "letterSpacing": "22%",
+      "textCase": "UPPER"
+    },
+    {
+      "name": "Caption/Muted",
+      "family": "Inter",
+      "weight": "Regular",
+      "size": 12,
+      "lineHeight": 1.4,
+      "letterSpacing": "0"
+    },
+    {
+      "name": "Button/Uppercase",
+      "family": "Inter",
+      "weight": "Bold",
+      "size": 12,
+      "lineHeight": 1,
+      "letterSpacing": "8%",
+      "textCase": "UPPER"
+    }
+  ],
+  "components": [
+    {
+      "name": "Logo",
+      "variants": ["Default", "Small", "Inverse", "LogoMark Only"],
+      "properties": ["variant", "inverse"],
+      "autoLayout": {
+        "direction": "horizontal",
+        "gap": 12,
+        "align": "center"
+      }
+    },
+    {
+      "name": "Button",
+      "variants": [
+        "Primary / Small / Default",
+        "Primary / Medium / Default",
+        "Primary / Large / Default",
+        "Primary / Medium / Hover",
+        "Primary / Medium / Focus",
+        "Primary / Medium / Disabled",
+        "Ghost / Medium / Default"
+      ],
+      "properties": ["tone", "size", "state", "showIcon"],
+      "autoLayout": {
+        "direction": "horizontal",
+        "gap": 10,
+        "align": "center",
+        "paddingXBySize": {
+          "Small": 18,
+          "Medium": 28,
+          "Large": 96
+        },
+        "heightBySize": {
+          "Small": 36,
+          "Medium": 44,
+          "Large": 58
+        },
+        "radiusBySize": {
+          "Small": 8,
+          "Medium": 8,
+          "Large": 12
+        }
+      },
+      "usage": [
+        "Use the dark primary button for the main action on a screen or section.",
+        "Avoid multiple primary buttons in one section.",
+        "Button text should be uppercase and concise."
+      ]
+    },
+    {
+      "name": "Badge",
+      "variants": ["Status / Active", "Status / Neutral", "Chip", "Tag"],
+      "examples": ["AI LABORATORY · ACTIVE", "TRACK I", "Electronics", "Policy", "Science"],
+      "properties": ["tone", "variant", "showDot"]
+    },
+    {
+      "name": "Card",
+      "variants": ["Default", "Interactive", "Selected", "Disabled"],
+      "properties": ["state", "showMedia", "showFooter"],
+      "autoLayout": {
+        "direction": "vertical",
+        "gap": 24,
+        "padding": 28,
+        "radius": 8
+      }
+    },
+    {
+      "name": "Track Card",
+      "variants": ["Green / Default", "Green / Hover", "Green / Selected", "Blue / Default", "Blue / Hover", "Blue / Selected"],
+      "properties": ["tone", "state", "showIcon", "showTags"],
+      "slots": ["Icon", "Eyebrow", "Title", "Description", "Tags"],
+      "autoLayout": {
+        "direction": "vertical",
+        "gap": 24,
+        "padding": 28,
+        "radius": 8
+      }
+    },
+    {
+      "name": "Section Heading",
+      "variants": ["With Lines", "Plain"],
+      "properties": ["variant"],
+      "example": "ENVIRONMENTAL TRACKS"
+    },
+    {
+      "name": "Header",
+      "variants": ["Desktop", "Mobile"],
+      "slots": ["Left Logo", "Center Meta Label", "Right CTA"]
+    },
+    {
+      "name": "Footer",
+      "variants": ["Default", "Minimal"],
+      "slots": ["Logo", "Meta"]
+    }
+  ],
+  "patterns": [
+    {
+      "name": "Hero Section",
+      "includes": ["Status Badge", "Display/Hero", "Body/Large", "Signal List"]
+    },
+    {
+      "name": "Track Selection Section",
+      "includes": ["Section Heading", "Track Card Grid"]
+    },
+    {
+      "name": "CTA Section",
+      "includes": ["Button / Primary / Large", "Caption/Muted"]
+    },
+    {
+      "name": "Research Workspace Header",
+      "includes": ["Header", "Status Badge", "Workspace Metadata"]
+    },
+    {
+      "name": "Empty State",
+      "includes": ["Card", "Body/Regular", "Button / Ghost"]
+    },
+    {
+      "name": "Panel Layout",
+      "includes": ["Header", "Sidebar", "Result Panel", "Reasoning Panel"]
+    }
+  ],
+  "exampleScreens": [
+    "Landing Page",
+    "Workspace Selection",
+    "E-waste Dashboard",
+    "Wastewater Dashboard",
+    "Research Result View",
+    "AI Reasoning Panel",
+    "Source / Literature Card"
+  ],
+  "documentationBlockTemplate": ["Use when", "Do not use when", "Spacing", "Variants", "Accessibility notes"]
+}
