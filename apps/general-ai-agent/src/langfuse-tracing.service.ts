@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { CallbackHandler } from '@langfuse/langchain';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import {
   getActiveTraceId,
   propagateAttributes,
@@ -17,6 +18,7 @@ interface TraceOptions {
   input?: unknown;
   metadata?: Record<string, unknown>;
   output?: unknown;
+  sessionId?: string;
   tags?: string[];
   type?: LangfuseObservationType;
 }
@@ -24,6 +26,7 @@ interface TraceOptions {
 @Injectable()
 export class LangfuseTracingService {
   private readonly version = process.env.APP_VERSION || 'local';
+  private readonly sessionStorage = new AsyncLocalStorage<string | undefined>();
 
   isEnabled(): boolean {
     return isLangfuseConfigured();
@@ -32,6 +35,7 @@ export class LangfuseTracingService {
   langchainHandler(tags: string[] = [], metadata: Record<string, unknown> = {}): CallbackHandler | undefined {
     if (!this.isEnabled()) return undefined;
     return new CallbackHandler({
+      sessionId: this.sessionStorage.getStore(),
       tags: this.tags(...tags),
       version: this.version,
       traceMetadata: {
@@ -65,6 +69,7 @@ export class LangfuseTracingService {
     }
 
     const hasParentTrace = Boolean(getActiveTraceId());
+    const sessionId = options.sessionId ?? this.sessionStorage.getStore();
     return startActiveObservation(
       name,
       async (observation: LangfuseSpan) =>
@@ -72,33 +77,36 @@ export class LangfuseTracingService {
           {
             traceName: hasParentTrace ? undefined : name,
             tags: this.tags(...(options.tags ?? [])),
+            sessionId,
             version: this.version,
             metadata: this.stringMetadata(options.metadata),
           },
           async () => {
-            observation.update({
-              input: options.input,
-              metadata: {
-                service: 'general-ai-agent',
-                ...options.metadata,
-              },
-              version: this.version,
-            });
-
-            try {
-              const result = await fn({ traceId: observation.traceId });
-              observation.update({ output: options.output ?? result });
-              return result;
-            } catch (err) {
+            return this.sessionStorage.run(sessionId, async () => {
               observation.update({
-                level: 'ERROR',
-                statusMessage: err instanceof Error ? err.message : String(err),
-                output: {
-                  error: err instanceof Error ? err.message : String(err),
+                input: options.input,
+                metadata: {
+                  service: 'general-ai-agent',
+                  ...options.metadata,
                 },
+                version: this.version,
               });
-              throw err;
-            }
+
+              try {
+                const result = await fn({ traceId: observation.traceId });
+                observation.update({ output: options.output ?? result });
+                return result;
+              } catch (err) {
+                observation.update({
+                  level: 'ERROR',
+                  statusMessage: err instanceof Error ? err.message : String(err),
+                  output: {
+                    error: err instanceof Error ? err.message : String(err),
+                  },
+                });
+                throw err;
+              }
+            });
           },
         ),
       { asType: (options.type ?? 'span') as 'span' },
