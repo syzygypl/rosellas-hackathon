@@ -1,11 +1,20 @@
 {
   "name": "rosellas-hackathon",
   "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
   "scripts": {
-    "build": "npm --prefix backend run build && npm --prefix frontend run build",
-    "build:backend": "npm --prefix backend run build",
-    "build:frontend": "npm --prefix frontend run build",
-    "start:backend": "npm --prefix backend run start:dev",
-    "start:frontend": "npm --prefix frontend start"
+    "nx": "nx",
+    "build": "nx run-many --target=build --projects=backend,frontend",
+    "build:backend": "nx run backend:build",
+    "build:frontend": "nx run frontend:build",
+    "start:backend": "nx run backend:serve",
+    "start:frontend": "nx run frontend:serve",
+    "graph": "nx graph"
+  },
+  "devDependencies": {
+    "nx": "^23.0.1"
   }
 }

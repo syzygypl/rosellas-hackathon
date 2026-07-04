@@ -4,29 +4,40 @@ Two-service CRUD demo for Google Cloud Run:
 
 - `frontend/`: Angular SPA served by nginx on Cloud Run.
 - `backend/`: NestJS API under `/api`, backed by Firestore.
+- root workspace: Nx monorepo orchestration over npm workspaces for `backend/` and `frontend/`.
 - `.github/workflows/`: independent GitHub Actions workflows for infra bootstrap, backend deploy, and frontend deploy.
 
 The deployment path is intentionally small: GitHub Actions authenticates to GCP with Workload Identity Federation, Google Cloud Build builds Docker images, Artifact Registry stores images, and Cloud Run runs the services.
 
 ## Local Development
 
-Backend:
+Install dependencies from the repository root:
 
 ```bash
-cd backend
 npm install
-GOOGLE_CLOUD_PROJECT=<project-id> npm run start:dev
 ```
 
-Frontend:
+Run the backend:
 
 ```bash
-cd frontend
-npm install
-npm start
+GOOGLE_CLOUD_PROJECT=<project-id> npm run start:backend
+```
+
+Run the frontend:
+
+```bash
+npm run start:frontend
 ```
 
 By default the local frontend calls `http://localhost:8080/api`.
+
+Build through Nx:
+
+```bash
+npm run build
+npm run build:backend
+npm run build:frontend
+```
 
 ## GitHub Actions Configuration
 
