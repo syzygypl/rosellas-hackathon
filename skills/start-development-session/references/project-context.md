@@ -90,6 +90,7 @@ Backend environment:
 - `GIT_SHA`: commit SHA returned by `/api/version`; CI sets this from `GITHUB_SHA`.
 - `BUILD_TIME`: UTC ISO timestamp returned by `/api/version`; CI sets this during deploy.
 - `LOG_LEVEL`: Cloud Run structured application log threshold; defaults to `INFO`.
+- `OPENAI_API_KEY`: optional OpenAI-compatible key for the Deep Agent chat. The backend also accepts `EMBEDDING_API_KEY` and legacy `OPEN_AI_API_KEY` as fallbacks, and maps the chosen key to LangChain.
 - `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY`: optional; when both are set, the backend exports Langfuse traces for `/api/chat`, `/api/agent/solve`, `/api/solve`, LangChain model/agent calls, and Nest-side MCP tool calls.
 - `LANGFUSE_BASE_URL`: defaults to `https://cloud.langfuse.com`.
 - `LANGFUSE_TRACING_ENVIRONMENT`: optional Langfuse environment label; use `local` locally and a deployed label such as `production` in Cloud Run.
@@ -154,7 +155,7 @@ GitHub Actions workflows:
 - `infra-bootstrap.yml`: enables required Google APIs, ensures Firestore, and ensures the `cloud-run-apps` Artifact Registry repository.
 - `crud-backend.yml`: builds `apps/examples/backend` through Nx, packages the prebuilt artifact with Docker, pushes `crud-backend`, and deploys Cloud Run.
 - `crud-frontend.yml`: resolves `crud-backend`, builds `apps/examples/frontend` through Nx, packages the prebuilt artifact with Docker, pushes `crud-frontend`, and deploys Cloud Run.
-- `general-ai-agent.yml`: builds `apps/general-ai-agent` through Nx, packages the prebuilt artifact with Docker, pushes `general-ai-agent`, sets `MCP_URL` to the regional `triz-mcp-server` Cloud Run URL when not configured manually, and deploys Cloud Run.
+- `general-ai-agent.yml`: builds `apps/general-ai-agent` through Nx, packages the prebuilt artifact with Docker, pushes `general-ai-agent`, sets `MCP_URL` to the regional `triz-mcp-server` Cloud Run URL when not configured manually, resolves an OpenAI-compatible key from `OPENAI_API_KEY`, `EMBEDDING_API_KEY`, or legacy `OPEN_AI_API_KEY`, and deploys Cloud Run.
 - `customer-portal.yml`: resolves `general-ai-agent`, builds `apps/customer-portal` through Nx, packages the prebuilt artifact with Docker, pushes `customer-portal`, and deploys Cloud Run.
 - `research-landing.yml`: resolves `customer-portal`, builds `apps/landing-page` through Nx, packages the prebuilt static artifact with Docker, pushes `research-landing`, and deploys Cloud Run.
 - `triz-mcp-server.yml`: builds `apps/triz-mcp-server` through Nx, packages the Python app with Docker, pushes `triz-mcp-server`, sets external embeddings env vars and MCP allowed hosts, and deploys Cloud Run.
@@ -182,7 +183,7 @@ Optional GitHub Actions variables:
 
 Optional GitHub Actions secrets:
 
-- `OPENAI_API_KEY` for `general-ai-agent`
+- `OPENAI_API_KEY` for `general-ai-agent`; if absent, deploy falls back to `EMBEDDING_API_KEY`, then legacy `OPEN_AI_API_KEY`
 - `LANGFUSE_SECRET_KEY` for optional `general-ai-agent` tracing
 
 Google Observability baseline:
