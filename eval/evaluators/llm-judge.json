@@ -1,0 +1,37 @@
+{
+  "id": "local-llm-judge",
+  "type": "local_llm_judge",
+  "description": "Optional local OpenAI judge for qualitative scoring. Runs only when OPENAI_API_KEY is present unless required by CLI flag.",
+  "modelEnvVars": ["EVAL_LLM_JUDGE_MODEL", "LANGFUSE_EVAL_MODEL"],
+  "fallbackModel": "gpt-4.1-mini",
+  "systemPrompt": "You are a strict evaluator for a TRIZ sustainability agent. Return only JSON with numeric fields from 0 to 1 and short reasoning.",
+  "rubric": {
+    "problem_fit": "Addresses the exact contradiction and constraints.",
+    "triz_grounding": "Grounded in TRIZ principles, parameters, contradiction matrix, or analogous inventive principles.",
+    "feasibility_safety": "Operationally plausible and avoids unsafe or forbidden recommendations.",
+    "overall_quality": "Compact, useful solution quality."
+  },
+  "scores": [
+    {
+      "field": "problem_fit",
+      "name": "llm_problem_fit",
+      "dataType": "NUMERIC"
+    },
+    {
+      "field": "triz_grounding",
+      "name": "llm_triz_grounding",
+      "dataType": "NUMERIC"
+    },
+    {
+      "field": "feasibility_safety",
+      "name": "llm_feasibility_safety",
+      "dataType": "NUMERIC"
+    },
+    {
+      "field": "overall_quality",
+      "name": "llm_overall_quality",
+      "dataType": "NUMERIC"
+    }
+  ],
+  "statusScoreName": "llm_judge_status"
+}

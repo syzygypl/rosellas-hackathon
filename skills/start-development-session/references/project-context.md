@@ -44,7 +44,7 @@ Use this document to load the Rosellas Hackathon project context before changing
 | TRIZ MCP config | `apps/triz-mcp-server/app/core/config.py` | Reads MCP bind settings and external embeddings provider settings. |
 | SCAMPER MCP app | `apps/scamper-mcp-server/` | Python FastMCP server with SCAMPER lens tools, Dockerfile, uv lockfile, and Nx build/serve targets. |
 | SCAMPER MCP data | `apps/scamper-mcp-server/app/services/scamper.py` | Static dataset of the seven SCAMPER lenses (questions, examples). |
-| Eval CLI | `eval/` | Scenario JSON, local deterministic/LLM evaluators, Langfuse observation polling, hosted evaluator push definitions, and CLI source. |
+| Eval CLI | `eval/` | Local eval suite. `eval/scenarios/` contains scenario JSON, `eval/evaluators/` contains inspectable evaluator definitions, and `eval/framework/` contains CLI/runtime code. |
 | Cloud Run images | `apps/examples/backend/Dockerfile`, `apps/examples/frontend/Dockerfile` | Service-specific container packaging. GitHub Actions builds Nx artifacts before Docker packaging. Backend uses `apps/examples/backend/cloudbuild.yaml` with repository root context. |
 | Deploy workflows | `.github/workflows/` | Infra bootstrap plus service-specific workflows named after Cloud Run services. |
 | Infra links | `docs/google-infra-links.md` | Current resource URLs and GCP identifiers. |
@@ -92,7 +92,7 @@ npm run build:mcp
 npm run build:scamper
 ```
 
-Unit tests (Jest, transpile-only ts-jest; specs live next to code as `*.spec.ts` under `apps/<app>/src/` and `eval/src/`):
+Unit tests (Jest, transpile-only ts-jest; specs live next to code as `*.spec.ts` under `apps/<app>/src/` and `eval/framework/`):
 
 ```bash
 npm test

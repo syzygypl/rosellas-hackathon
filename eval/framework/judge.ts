@@ -1,4 +1,5 @@
 import type { Evaluator } from '@langfuse/client';
+import { loadLlmJudgeDefinition } from './evaluator-definitions';
 import { allText } from './evaluators';
 import type { EvalScenario, EvalScore, ScenarioOutput } from './types';
 
@@ -9,6 +10,8 @@ interface JudgeResult {
   overall_quality: number;
   reasoning: string;
 }
+
+const judgeDefinition = loadLlmJudgeDefinition();
 
 export function createLlmJudgeEvaluator(
   scenarioById: Map<string, EvalScenario>,
@@ -32,7 +35,9 @@ export async function judgeScenario(
     return skipped('OPENAI_API_KEY not set');
   }
 
-  const model = process.env.EVAL_LLM_JUDGE_MODEL || process.env.LANGFUSE_EVAL_MODEL || 'gpt-4.1-mini';
+  const model =
+    judgeDefinition.modelEnvVars.map((envVar) => process.env[envVar]).find((value) => value?.trim()) ||
+    judgeDefinition.fallbackModel;
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -46,8 +51,7 @@ export async function judgeScenario(
       messages: [
         {
           role: 'system',
-          content:
-            'You are a strict evaluator for a TRIZ sustainability agent. Return only JSON with numeric fields from 0 to 1 and short reasoning.',
+          content: judgeDefinition.systemPrompt,
         },
         {
           role: 'user',
@@ -63,12 +67,7 @@ export async function judgeScenario(
             solutionText: allText(output),
             engine: output.chat.engine,
             toolTrail: output.chat.solution?.trail || output.observations.toolTrail,
-            rubric: {
-              problem_fit: 'Addresses the exact contradiction and constraints.',
-              triz_grounding: 'Grounded in TRIZ principles, parameters, contradiction matrix, or analogous inventive principles.',
-              feasibility_safety: 'Operationally plausible and avoids unsafe or forbidden recommendations.',
-              overall_quality: 'Compact, useful solution quality.',
-            },
+            rubric: judgeDefinition.rubric,
           }),
         },
       ],
@@ -85,11 +84,10 @@ export async function judgeScenario(
   const parsed = parseJudgeResult(content);
 
   return [
-    score('llm_problem_fit', parsed.problem_fit, parsed.reasoning),
-    score('llm_triz_grounding', parsed.triz_grounding),
-    score('llm_feasibility_safety', parsed.feasibility_safety),
-    score('llm_overall_quality', parsed.overall_quality),
-    { name: 'llm_judge_status', value: 'scored', dataType: 'CATEGORICAL', comment: model },
+    ...judgeDefinition.scores.map((definition, index) =>
+      score(definition.name, clamp((parsed as any)[definition.field || definition.name]), index === 0 ? parsed.reasoning : undefined),
+    ),
+    { name: judgeDefinition.statusScoreName, value: 'scored', dataType: 'CATEGORICAL', comment: model },
   ];
 }
 
@@ -106,7 +104,7 @@ function parseJudgeResult(content: unknown): JudgeResult {
 }
 
 function skipped(reason: string): EvalScore[] {
-  return [{ name: 'llm_judge_status', value: 'skipped', dataType: 'CATEGORICAL', comment: reason }];
+  return [{ name: judgeDefinition.statusScoreName, value: 'skipped', dataType: 'CATEGORICAL', comment: reason }];
 }
 
 function score(name: string, value: number, comment?: string): EvalScore {

@@ -22,8 +22,8 @@
     "start:mcp": "nx run triz-mcp-server:serve",
     "start:scamper": "nx run scamper-mcp-server:serve",
     "start:landing": "nx run landing-page:serve",
-    "eval": "tsx eval/src/cli.ts",
-    "eval:push": "tsx eval/src/cli.ts push",
+    "eval": "tsx eval/framework/cli.ts",
+    "eval:push": "tsx eval/framework/cli.ts push",
     "test": "jest",
     "graph": "nx graph"
   },

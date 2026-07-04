@@ -1,10 +1,10 @@
 /**
  * Minimal Jest setup for pure unit tests (no Angular TestBed, no Nest e2e).
- * Specs live next to the code as *.spec.ts under apps/<app>/src/ and eval/src/.
+ * Specs live next to the code as *.spec.ts under apps/<app>/src/ and eval/framework/.
  */
 module.exports = {
   testEnvironment: 'node',
-  testMatch: ['<rootDir>/apps/**/src/**/*.spec.ts', '<rootDir>/eval/src/**/*.spec.ts'],
+  testMatch: ['<rootDir>/apps/**/src/**/*.spec.ts', '<rootDir>/eval/framework/**/*.spec.ts'],
   transform: {
     '^.+\\.ts$': [
       'ts-jest',

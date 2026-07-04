@@ -2,6 +2,12 @@
 
 Root-level local evals for the Rosellas TRIZ chat surface.
 
+## Layout
+
+- `eval/scenarios/`: scenario cases. Add new SDG prompts here.
+- `eval/evaluators/`: inspectable evaluator definitions, score names, rubrics, thresholds, hosted Langfuse payloads.
+- `eval/framework/`: CLI, Langfuse plumbing, backend runner, and test harness code.
+
 ## Commands
 
 ```bash

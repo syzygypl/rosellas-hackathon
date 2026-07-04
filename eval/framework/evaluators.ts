@@ -1,5 +1,8 @@
 import type { Evaluator, RunEvaluator } from '@langfuse/client';
+import { loadDeterministicDefinition } from './evaluator-definitions';
 import type { DeterministicBreakdown, EvalScenario, EvalScore, ScenarioOutput } from './types';
+
+const deterministicDefinition = loadDeterministicDefinition();
 
 export function evaluateDeterministic(scenario: EvalScenario, output: ScenarioOutput): DeterministicBreakdown {
   const text = allText(output).toLowerCase();
@@ -27,20 +30,19 @@ export function evaluateDeterministic(scenario: EvalScenario, output: ScenarioOu
     : 1;
   const answerBrief = countWords(output.chat.answer) <= scenario.maxAnswerWords;
   const solutionPresent = Boolean(output.chat.solution);
-  const toolTrailPresent = /search_parameter|browse_contradiction_matrix|contradiction matrix|triz matrix|triz/.test(
-    trailText,
-  );
+  const toolTrailPresent = new RegExp(deterministicDefinition.toolTrailPattern).test(trailText);
   const enginePresent = Boolean(output.chat.engine);
   const forbiddenAbsent = forbiddenMatches.length === 0;
+  const weights = deterministicDefinition.weights;
 
   const overall =
-    0.15 * bool(enginePresent) +
-    0.15 * bool(solutionPresent) +
-    0.15 * bool(toolTrailPresent) +
-    0.1 * bool(answerBrief) +
-    0.2 * bool(forbiddenAbsent) +
-    0.2 * coverage +
-    0.05 * positiveSignalCoverage;
+    weights.enginePresent * bool(enginePresent) +
+    weights.solutionPresent * bool(solutionPresent) +
+    weights.toolTrailPresent * bool(toolTrailPresent) +
+    weights.answerBrief * bool(answerBrief) +
+    weights.forbiddenAbsent * bool(forbiddenAbsent) +
+    weights.coverage * coverage +
+    weights.positiveSignalCoverage * positiveSignalCoverage;
 
   return {
     enginePresent,
@@ -83,7 +85,7 @@ export function deterministicScores(scenario: EvalScenario, output: ScenarioOutp
       name: 'deterministic_overall',
       value: b.overall,
       dataType: 'NUMERIC',
-      comment: b.overall >= 0.75 ? 'pass' : 'below threshold',
+      comment: b.overall >= deterministicDefinition.passThreshold ? 'pass' : 'below threshold',
     },
   ];
 }
@@ -108,20 +110,20 @@ export const aggregateEvaluator: RunEvaluator<string, unknown, { scenarioId: str
       name: 'run_average_deterministic',
       value: average,
       dataType: 'NUMERIC',
-      comment: average >= 0.75 ? 'pass' : 'fail',
+      comment: average >= deterministicDefinition.runPassThreshold ? 'pass' : 'fail',
     },
     {
       name: 'run_pass',
-      value: average >= 0.75 ? 1 : 0,
+      value: average >= deterministicDefinition.runPassThreshold ? 1 : 0,
       dataType: 'BOOLEAN',
-      comment: 'Threshold: average deterministic score >= 0.75',
+      comment: `Threshold: average deterministic score >= ${deterministicDefinition.runPassThreshold}`,
     },
   ];
 };
 
 export function passedRun(scores: EvalScore[]): boolean {
   const deterministic = scores.find((score) => score.name === 'deterministic_overall')?.value;
-  return typeof deterministic === 'number' && deterministic >= 0.75;
+  return typeof deterministic === 'number' && deterministic >= deterministicDefinition.passThreshold;
 }
 
 export function allText(output: ScenarioOutput): string {
