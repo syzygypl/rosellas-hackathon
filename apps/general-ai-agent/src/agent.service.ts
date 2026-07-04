@@ -17,9 +17,93 @@ export interface AgentSolveResult {
   toolCalls: AgentToolCall[];
 }
 
+/** One humanized solution direction on the side-panel card. */
+export interface SolutionDirection {
+  principle: string;
+  idea: string;
+  example?: string;
+}
+
+/** Humanized side-panel card, written by the LLM in the conversation language. */
+export interface SolutionCard {
+  title: string;
+  summary: string;
+  contradiction: string;
+  directions: SolutionDirection[];
+  nextSteps: string[];
+}
+
 const SYSTEM_PROMPT = loadPrompt('agent-system.md');
 const INTAKE_SYSTEM_PROMPT = loadPrompt('intake-system.md');
 const SUMMARY_SYSTEM_PROMPT = loadPrompt('summary-system.md');
+const SUGGEST_SYSTEM_PROMPT = loadPrompt('suggest-system.md');
+const CARD_SYSTEM_PROMPT = loadPrompt('card-system.md');
+
+const CARD_SCHEMA = {
+  type: 'object',
+  properties: {
+    title: {
+      type: 'string',
+      description: 'short human title for the problem, max ~8 words, in the user language',
+    },
+    summary: {
+      type: 'string',
+      description: '1-2 plain sentences: what we understood about the problem and its goal',
+    },
+    contradiction: {
+      type: 'string',
+      description:
+        'the core trade-off in plain everyday words ("the more X, the worse Y"); empty string when none',
+    },
+    directions: {
+      type: 'array',
+      description: '2-4 solution directions grounded in the provided tool outputs',
+      items: {
+        type: 'object',
+        properties: {
+          principle: {
+            type: 'string',
+            description: 'inventive principle number and translated name, e.g. "Zasada 1 — Segmentacja"',
+          },
+          idea: {
+            type: 'string',
+            description: "1-2 sentences applying the principle concretely to the user's problem",
+          },
+          example: {
+            type: 'string',
+            description: 'one short real-world example of the principle; empty string if none',
+          },
+        },
+        required: ['principle', 'idea', 'example'],
+        additionalProperties: false,
+      },
+    },
+    nextSteps: {
+      type: 'array',
+      items: { type: 'string' },
+      description: '1-3 short concrete next steps for the user',
+    },
+  },
+  required: ['title', 'summary', 'contradiction', 'directions', 'nextSteps'],
+  additionalProperties: false,
+} as const;
+
+/** Cap each raw tool output handed to the card writer so the call stays cheap. */
+const CARD_TOOL_OUTPUT_LIMIT = 4000;
+
+const SUGGEST_SCHEMA = {
+  type: 'object',
+  properties: {
+    suggestions: {
+      type: 'array',
+      items: { type: 'string' },
+      description:
+        '2-4 short, self-contained quick replies to the assistant question; empty array when the message asks nothing',
+    },
+  },
+  required: ['suggestions'],
+  additionalProperties: false,
+} as const;
 
 const INTAKE_SCHEMA = {
   type: 'object',
@@ -32,8 +116,14 @@ const INTAKE_SCHEMA = {
       type: 'string',
       description: 'the single clarifying question to ask when complete=false; empty string otherwise',
     },
+    suggestions: {
+      type: 'array',
+      items: { type: 'string' },
+      description:
+        '2-4 short, clickable answer options for the question (a few words each, in the user language); empty array when complete=true or when no sensible options exist',
+    },
   },
-  required: ['complete', 'question'],
+  required: ['complete', 'question', 'suggestions'],
   additionalProperties: false,
 } as const;
 
@@ -51,6 +141,8 @@ export class AgentService {
     'low') as 'minimal' | 'low' | 'medium' | 'high';
   private agentPromise: Promise<ReturnType<typeof createDeepAgent>> | null = null;
   private intakeModel: { invoke(input: unknown): Promise<unknown> } | null = null;
+  private suggestModel: { invoke(input: unknown): Promise<unknown> } | null = null;
+  private cardModel: { invoke(input: unknown): Promise<unknown> } | null = null;
   private lightModel: ChatOpenAI | null = null;
 
   isConfigured(): boolean {
@@ -113,7 +205,7 @@ export class AgentService {
    */
   async intake(
     history: { role: 'user' | 'assistant'; content: string }[],
-  ): Promise<{ complete: boolean; question: string }> {
+  ): Promise<{ complete: boolean; question: string; suggestions: string[] }> {
     if (!this.intakeModel) {
       this.intakeModel = new ChatOpenAI({
         model: this.model,
@@ -124,11 +216,112 @@ export class AgentService {
     const result = (await this.intakeModel.invoke([
       { role: 'system', content: INTAKE_SYSTEM_PROMPT },
       ...history.map((m) => ({ role: m.role, content: m.content })),
-    ])) as { complete?: boolean; question?: string };
+    ])) as { complete?: boolean; question?: string; suggestions?: unknown[] };
 
     const complete = Boolean(result?.complete);
-    this.logger.log(`Intake: complete=${complete}${complete ? '' : ` question="${result?.question}"`}`);
-    return { complete, question: String(result?.question ?? '') };
+    const suggestions = (Array.isArray(result?.suggestions) ? result.suggestions : [])
+      .map((s) => String(s ?? '').trim())
+      .filter(Boolean)
+      .slice(0, 4);
+    this.logger.log(`Intake: complete=${complete}${complete ? '' : ` question="${result?.question}" suggestions=${JSON.stringify(suggestions)}`}`);
+    return { complete, question: String(result?.question ?? ''), suggestions };
+  }
+
+  /**
+   * Quick replies: given the assistant's final chat message, generate 2-4
+   * clickable answer options when that message asks the user a question.
+   */
+  async suggestReplies(answer: string): Promise<string[]> {
+    if (!this.suggestModel) {
+      this.suggestModel = new ChatOpenAI({
+        model: this.model,
+        reasoning: { effort: 'none' as any },
+        useResponsesApi: true,
+      }).withStructuredOutput(SUGGEST_SCHEMA as any, { name: 'quick_replies' });
+    }
+    const result = (await this.suggestModel.invoke([
+      { role: 'system', content: SUGGEST_SYSTEM_PROMPT },
+      { role: 'user', content: answer },
+    ])) as { suggestions?: unknown[] };
+
+    const suggestions = (Array.isArray(result?.suggestions) ? result.suggestions : [])
+      .map((s) => String(s ?? '').trim())
+      .filter(Boolean)
+      .slice(0, 4);
+    this.logger.log(`Quick replies: ${JSON.stringify(suggestions)}`);
+    return suggestions;
+  }
+
+  /**
+   * Humanize the side-panel card: rewrite the raw tool outputs into a card in
+   * the conversation language — plain-words contradiction, solution directions
+   * applied to the user's problem, next steps. Grounded in the tool outputs.
+   */
+  async composeSolutionCard(
+    history: { role: 'user' | 'assistant'; content: string }[],
+    toolCalls: AgentToolCall[],
+    answer: string,
+  ): Promise<SolutionCard> {
+    if (!this.cardModel) {
+      this.cardModel = new ChatOpenAI({
+        model: this.model,
+        reasoning: { effort: 'none' as any },
+        useResponsesApi: true,
+      }).withStructuredOutput(CARD_SCHEMA as any, { name: 'solution_card' });
+    }
+
+    const problem = history
+      .filter((m) => m.role === 'user')
+      .map((m) => m.content.trim())
+      .join('\n');
+    const toolDump = toolCalls
+      .map((c) => `### ${c.tool}(${JSON.stringify(c.args)})\n${c.output.slice(0, CARD_TOOL_OUTPUT_LIMIT)}`)
+      .join('\n\n');
+
+    const result = (await this.cardModel.invoke([
+      { role: 'system', content: CARD_SYSTEM_PROMPT },
+      {
+        role: 'user',
+        content: [
+          `## User problem (their own words)`,
+          problem,
+          ``,
+          `## Assistant final answer`,
+          answer,
+          ``,
+          `## Raw TRIZ tool outputs`,
+          toolDump,
+        ].join('\n'),
+      },
+    ])) as Partial<SolutionCard> & { directions?: unknown[]; nextSteps?: unknown[] };
+
+    const directions = (Array.isArray(result?.directions) ? result.directions : [])
+      .map((d) => {
+        const dir = d as Partial<SolutionDirection>;
+        return {
+          principle: String(dir?.principle ?? '').trim(),
+          idea: String(dir?.idea ?? '').trim(),
+          example: String(dir?.example ?? '').trim() || undefined,
+        };
+      })
+      .filter((d) => d.principle && d.idea)
+      .slice(0, 4);
+    const nextSteps = (Array.isArray(result?.nextSteps) ? result.nextSteps : [])
+      .map((s) => String(s ?? '').trim())
+      .filter(Boolean)
+      .slice(0, 3);
+
+    const card: SolutionCard = {
+      title: String(result?.title ?? '').trim(),
+      summary: String(result?.summary ?? '').trim(),
+      contradiction: String(result?.contradiction ?? '').trim(),
+      directions,
+      nextSteps,
+    };
+    this.logger.log(
+      `Solution card: "${card.title}" with ${card.directions.length} direction(s), ${card.nextSteps.length} next step(s)`,
+    );
+    return card;
   }
 
   /** Compress a long solution report into a short chat-friendly summary. */

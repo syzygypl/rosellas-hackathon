@@ -9,4 +9,8 @@ or when the user's latest message is a follow-up about an earlier solution rathe
 
 Otherwise set complete=false and write ONE short, friendly clarifying question (question field)
 in the same language the user writes in, about the single most important missing piece.
-Max 2 sentences; you may add 2-4 very short example options as bullets. Ask about one thing only.
+Max 2 sentences; ask about one thing only. Do NOT list answer options inside the question text.
+Instead put 2-4 very short, self-contained answer options into the suggestions field (same language);
+the UI renders them as clickable buttons, and a clicked option is sent verbatim as the user's reply,
+so each option must read as a complete standalone answer (e.g. "Chodzi o redukcję wagi", not "waga").
+Leave suggestions empty when the question has no sensible predefined answers (e.g. asking for a free-form description).

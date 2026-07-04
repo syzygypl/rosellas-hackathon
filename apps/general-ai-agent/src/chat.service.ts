@@ -1,5 +1,5 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
-import { AgentService, AgentToolCall } from './agent.service';
+import { AgentService, AgentToolCall, SolutionDirection } from './agent.service';
 import { SolverService } from './solver.service';
 import { TrizMcpService, TrizParameter } from './triz-mcp.service';
 
@@ -15,6 +15,12 @@ export interface ChatRequest {
 /** Structured payload for the side "solutions" panel in the UI. */
 export interface ChatSolution {
   title: string;
+  /** 1-2 plain sentences about the problem, in the conversation language (agent path only). */
+  summary?: string;
+  /** Humanized solution directions written by the LLM (agent path only). */
+  directions?: SolutionDirection[];
+  /** Suggested next steps for the user (agent path only). */
+  nextSteps?: string[];
   parameters: TrizParameter[];
   contradiction: string | null;
   principles: string;
@@ -29,6 +35,8 @@ export interface ChatResult {
   engine: 'agent' | 'pipeline';
   solution: ChatSolution | null;
   warning?: string;
+  /** Optional quick-reply options rendered as buttons under the assistant question. */
+  suggestions?: string[];
 }
 
 /**
@@ -80,32 +88,57 @@ export class ChatService {
     if (questionsAsked < 3) {
       const intake = await this.agent.intake(messages);
       if (!intake.complete && intake.question) {
-        return { answer: intake.question, engine: 'agent', solution: null };
+        return { answer: intake.question, engine: 'agent', solution: null, suggestions: intake.suggestions };
       }
     }
 
     const { answer, toolCalls } = await this.agent.chat(messages);
 
     // Keep the chat conversational: a long solve report goes to the side panel
-    // in full, while the chat bubble gets a compressed summary.
+    // in full, while the chat bubble gets a compressed summary. In parallel,
+    // rewrite the raw tool outputs into a humanized card in the conversation
+    // language; the dry tool-call distillation stays as fallback and as the
+    // "technical details" section.
     let chatAnswer = answer;
     let report: string | undefined;
-    if (toolCalls.length && answer.split(/\s+/).length > 130) {
-      try {
-        chatAnswer = await this.agent.summarize(answer);
+    let solution: ChatSolution | null = null;
+    if (toolCalls.length) {
+      const needsSummary = answer.split(/\s+/).length > 130;
+      const [card, summary] = await Promise.all([
+        this.agent.composeSolutionCard(messages, toolCalls, answer).catch((err) => {
+          this.logger.warn(`Solution card composition failed, using raw card: ${err}`);
+          return null;
+        }),
+        needsSummary
+          ? this.agent.summarize(answer).catch((err) => {
+              this.logger.warn(`Report summarization failed, sending full answer: ${err}`);
+              return null;
+            })
+          : Promise.resolve(null),
+      ]);
+      if (summary) {
+        chatAnswer = summary;
         report = answer;
-      } catch (err) {
-        this.logger.warn(`Report summarization failed, sending full answer: ${err}`);
+      }
+      solution = { ...this.solutionFromToolCalls(lastUserContent, toolCalls), report };
+      if (card) {
+        solution.title = card.title || solution.title;
+        solution.summary = card.summary || undefined;
+        solution.contradiction = card.contradiction || solution.contradiction;
+        solution.directions = card.directions.length ? card.directions : undefined;
+        solution.nextSteps = card.nextSteps.length ? card.nextSteps : undefined;
       }
     }
 
-    return {
-      answer: chatAnswer,
-      engine: 'agent',
-      solution: toolCalls.length
-        ? { ...this.solutionFromToolCalls(lastUserContent, toolCalls), report }
-        : null,
-    };
+    // Quick replies for the follow-up question the agent usually ends with.
+    let suggestions: string[] | undefined;
+    try {
+      suggestions = await this.agent.suggestReplies(chatAnswer);
+    } catch (err) {
+      this.logger.warn(`Quick-reply generation failed: ${err}`);
+    }
+
+    return { answer: chatAnswer, engine: 'agent', suggestions, solution };
   }
 
   /** Distill the agent's tool activity into the side-panel structure. */

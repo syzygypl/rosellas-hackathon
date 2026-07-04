@@ -9,9 +9,22 @@ export interface ChatRequest {
   messages: ChatMessage[];
 }
 
+/** One humanized solution direction on the side-panel card. */
+export interface SolutionDirection {
+  principle: string;
+  idea: string;
+  example?: string;
+}
+
 /** Structured payload for the solutions side panel. */
 export interface ChatSolution {
   title: string;
+  /** 1-2 plain sentences about the problem, in the conversation language (agent path only). */
+  summary?: string;
+  /** Humanized solution directions written by the LLM (agent path only). */
+  directions?: SolutionDirection[];
+  /** Suggested next steps for the user (agent path only). */
+  nextSteps?: string[];
   parameters: TrizParameter[];
   contradiction: string | null;
   principles: string;
@@ -26,4 +39,6 @@ export interface ChatResult {
   engine: 'agent' | 'pipeline';
   solution: ChatSolution | null;
   warning?: string;
+  /** Optional quick-reply options rendered as buttons under the assistant question. */
+  suggestions?: string[];
 }

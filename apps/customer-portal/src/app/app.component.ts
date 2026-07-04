@@ -17,6 +17,8 @@ interface Bubble {
   cls: 'user' | 'bot';
   html: SafeHtml;
   solutionId?: number;
+  /** Quick-reply options shown as buttons while this is the latest bubble. */
+  suggestions?: string[];
 }
 
 interface SolutionCard {
@@ -79,7 +81,15 @@ export class AppComponent implements AfterViewChecked {
   }
 
   send(): void {
-    const text = this.input.trim();
+    this.sendText(this.input);
+  }
+
+  sendSuggestion(text: string): void {
+    this.sendText(text);
+  }
+
+  private sendText(raw: string): void {
+    const text = raw.trim();
     if (!text || this.loading()) {
       return;
     }
@@ -105,6 +115,7 @@ export class AppComponent implements AfterViewChecked {
           cls: 'bot',
           html: this.markdown(result.answer || '(pusta odpowiedź)'),
           solutionId,
+          suggestions: result.suggestions?.filter((s) => s.trim()),
         });
       },
       error: (err: HttpErrorResponse) => {
