@@ -7,6 +7,7 @@ Use this document to load the Rosellas Hackathon project context before changing
 - Repository: `rosellas-hackathon`
 - Purpose: hackathon Nx workspace with deployed Cloud Run apps and retained CRUD examples.
 - Workspace: Nx 23 monorepo with a single root `package.json` and `package-lock.json`.
+- Landing page: Angular 19 static landing app served by nginx from `apps/landing-page/`.
 - Main frontend: Angular 19 standalone SPA served by nginx from `apps/customer-portal/`.
 - Main backend: NestJS 10 API from `apps/general-ai-agent/`, globally prefixed with `/api`.
 - Example frontend: Angular 19 standalone SPA served by nginx from `apps/examples/frontend/`.
@@ -28,7 +29,9 @@ Use this document to load the Rosellas Hackathon project context before changing
 | Area | Path | Notes |
 | --- | --- | --- |
 | Root commands | `package.json` | Nx-backed scripts for builds, starts, graph, and project orchestration. |
-| Nx config | `nx.json`, `apps/examples/backend/project.json`, `apps/examples/frontend/project.json` | Defines backend/frontend projects and cacheable build targets. |
+| Nx config | `nx.json`, app-level `project.json` files | Defines app projects and cacheable build targets. |
+| Landing page | `apps/landing-page/src/app/` | Static Idealab research landing page with workspace CTA. |
+| Landing env | `apps/landing-page/src/environments/` | Local workspace URL is `http://localhost:4200`; workflow rewrites prod env during deploy. |
 | Backend entrypoint | `apps/examples/backend/src/main.ts` | Sets `/api`, CORS, validation pipe, Swagger at `/api/docs`, port default `8080`. |
 | Backend module | `apps/examples/backend/src/app.module.ts` | Registers health and items modules. |
 | Items API | `apps/examples/backend/src/items/` | Controller, DTOs, Firestore-backed service. |
@@ -55,6 +58,7 @@ Run locally:
 ```bash
 npm run start:backend
 npm run start:frontend
+npm run start:landing
 ```
 
 Build:
@@ -63,6 +67,7 @@ Build:
 npm run build
 npm run build:backend
 npm run build:frontend
+npm run build:landing
 ```
 
 There are currently no dedicated test scripts in either package. Use builds as the baseline verification unless the task adds tests.
@@ -83,6 +88,11 @@ Frontend environment:
 - Local Angular env points to `http://localhost:8080/api`.
 - Local Angular env includes `appVersion`, `buildSha`, and `buildTime` fields used by the UI version badge.
 - Frontend deploy workflows resolve the paired backend Cloud Run URL and rewrite the app production environment with `<backend-url>/api` plus frontend build metadata during the CI build.
+
+Landing page environment:
+
+- Local Angular env points `workspaceUrl` to `http://localhost:4200`.
+- The landing deploy workflow resolves the deployed `customer-portal` Cloud Run URL and rewrites the app production environment with that URL plus build metadata during the CI build.
 
 Versioning details and the checklist for new apps live in `docs/versioning/README.md`.
 
@@ -120,6 +130,7 @@ GitHub Actions workflows:
 - `crud-frontend.yml`: resolves `crud-backend`, builds `apps/examples/frontend` through Nx, packages the prebuilt artifact with Docker, pushes `crud-frontend`, and deploys Cloud Run.
 - `general-ai-agent.yml`: builds `apps/general-ai-agent` through Nx, packages the prebuilt artifact with Docker, pushes `general-ai-agent`, sets `MCP_URL`, and deploys Cloud Run.
 - `customer-portal.yml`: resolves `general-ai-agent`, builds `apps/customer-portal` through Nx, packages the prebuilt artifact with Docker, pushes `customer-portal`, and deploys Cloud Run.
+- `research-landing.yml`: resolves `customer-portal`, builds `apps/landing-page` through Nx, packages the prebuilt static artifact with Docker, pushes `research-landing`, and deploys Cloud Run.
 
 Workflow files and workflow `name` values should match the Cloud Run service they deploy.
 

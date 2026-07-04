@@ -1,0 +1,126 @@
+name: research-landing
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'apps/landing-page/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'nx.json'
+      - '.github/workflows/research-landing.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  ARTIFACT_REPOSITORY: cloud-run-apps
+  CLOUD_BUILD_SOURCE_BUCKET: ${{ vars.CLOUD_BUILD_SOURCE_BUCKET || 'crud-hackathon-ml-20260703-github-cloud-build-source' }}
+  IMAGE_NAME: research-landing
+  LANDING_SERVICE: research-landing
+  PROJECT_NUMBER: ${{ vars.GCP_PROJECT_NUMBER || '59918194944' }}
+  REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  WORKSPACE_SERVICE: customer-portal
+
+jobs:
+  deploy:
+    name: Build and deploy research-landing
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate configuration
+        run: |
+          test -n "$PROJECT_ID"
+          test -n "${{ vars.WIF_PROVIDER }}"
+          test -n "${{ vars.GCP_SERVICE_ACCOUNT }}"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Resolve workspace URL
+        run: |
+          if WORKSPACE_URL="$(gcloud run services describe "$WORKSPACE_SERVICE" \
+              --region "$REGION" \
+              --project "$PROJECT_ID" \
+              --format='value(status.url)' 2>/dev/null)"; then
+            echo "Resolved workspace URL: $WORKSPACE_URL"
+          else
+            WORKSPACE_URL="https://$WORKSPACE_SERVICE-$PROJECT_NUMBER.$REGION.run.app"
+            echo "Workspace service not found yet; using regional URL: $WORKSPACE_URL"
+          fi
+
+          echo "WORKSPACE_URL=$WORKSPACE_URL" >> "$GITHUB_ENV"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Build research-landing
+        run: |
+          APP_VERSION="$(node -p "require('./package.json').version")"
+          BUILD_TIME="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          printf "export const environment = {\n  production: true,\n  workspaceUrl: '%s',\n  appVersion: '%s',\n  buildSha: '%s',\n  buildTime: '%s',\n};\n" "$WORKSPACE_URL" "$APP_VERSION" "$GITHUB_SHA" "$BUILD_TIME" > apps/landing-page/src/environments/environment.prod.ts
+          npm ci
+          npm run build:landing
+
+      - name: Build and publish research-landing image
+        run: |
+          IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$ARTIFACT_REPOSITORY/$IMAGE_NAME:$GITHUB_SHA"
+          BUILD_ID="$(gcloud builds submit apps/landing-page \
+            --gcs-source-staging-dir "gs://$CLOUD_BUILD_SOURCE_BUCKET/source" \
+            --gcs-log-dir "gs://$CLOUD_BUILD_SOURCE_BUCKET/logs" \
+            --async \
+            --format='value(id)' \
+            --tag "$IMAGE" \
+            --project "$PROJECT_ID")"
+
+          echo "Cloud Build: https://console.cloud.google.com/cloud-build/builds/$BUILD_ID?project=$PROJECT_ID"
+          for _ in {1..120}; do
+            STATUS="$(gcloud builds describe "$BUILD_ID" \
+              --project "$PROJECT_ID" \
+              --format='value(status)')"
+
+            echo "Cloud Build status: $STATUS"
+            case "$STATUS" in
+              SUCCESS)
+                break
+                ;;
+              FAILURE|INTERNAL_ERROR|TIMEOUT|CANCELLED|EXPIRED)
+                exit 1
+                ;;
+            esac
+
+            sleep 5
+          done
+
+          test "$STATUS" = "SUCCESS"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Deploy research-landing to Cloud Run
+        run: |
+          gcloud run deploy "$LANDING_SERVICE" \
+            --image "$IMAGE" \
+            --region "$REGION" \
+            --project "$PROJECT_ID" \
+            --allow-unauthenticated \
+            --quiet

@@ -45,6 +45,7 @@ Docelowe obrazy używane przez workflowy:
 | `general-ai-agent` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/general-ai-agent` |
 | `customer-portal` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/customer-portal` |
 | `triz-mcp-server` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/triz-mcp-server` |
+| `research-landing` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/research-landing` |
 
 Zweryfikowane smoke buildy z obecnego repo:
 
@@ -128,6 +129,7 @@ Te linki nie są częścią GCP, ale są punktem wejścia do deployu tej infrast
 | `general-ai-agent` | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/general-ai-agent.yml |
 | `customer-portal` | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/customer-portal.yml |
 | `triz-mcp-server` | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/triz-mcp-server.yml |
+| `research-landing` | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/research-landing.yml |
 
 Ustawione GitHub Actions variables:
 

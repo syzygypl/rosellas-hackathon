@@ -1,0 +1,33 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "landing-page",
+  "projectType": "application",
+  "root": "apps/landing-page",
+  "sourceRoot": "apps/landing-page/src",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": [
+        "{projectRoot}/dist/landing-page"
+      ],
+      "options": {
+        "cwd": "apps/landing-page",
+        "command": "../../node_modules/.bin/ng build --configuration production"
+      }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/landing-page",
+        "command": "../../node_modules/.bin/ng serve --port 4300"
+      }
+    },
+    "watch": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/landing-page",
+        "command": "../../node_modules/.bin/ng build --watch --configuration development"
+      }
+    }
+  }
+}

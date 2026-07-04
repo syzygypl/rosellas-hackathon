@@ -3,6 +3,7 @@
 Nx workspace for the hackathon apps.
 
 - `apps/general-ai-agent/`: NestJS API from the MVP branch.
+- `apps/landing-page/`: static Angular landing page for the research platform, served by nginx on Cloud Run.
 - `apps/customer-portal/`: Angular CSR frontend and main customer-facing app.
 - `apps/triz-mcp-server/`: Python MCP server exposing TRIZ tools over Streamable HTTP.
 - `apps/examples/backend/`: previous example NestJS API under `/api`, backed by Firestore.
@@ -43,6 +44,14 @@ npm run start:frontend
 ```
 
 Open `http://localhost:4200`. The Angular frontend calls the backend at `http://localhost:8080/api` by default.
+
+Run the landing page:
+
+```bash
+npm run start:landing
+```
+
+Open `http://localhost:4300`. The "Enter Workspace" actions point to `http://localhost:4200` locally.
 
 ## AI Agent
 
@@ -86,6 +95,10 @@ apps/triz-mcp-server/
   app/main.py               FastMCP Streamable HTTP server
   app/tools/                registered TRIZ MCP tools
   app/services/triz.py      pytriz store and external embedding client
+
+apps/landing-page/
+  src/app/                  static research landing page
+  src/environments/         workspace URL and build metadata
 ```
 
 ## Nx Commands
@@ -96,9 +109,11 @@ npm run build:ai-agent
 npm run build:backend
 npm run build:frontend
 npm run build:mcp
+npm run build:landing
 npm run start:backend
 npm run start:frontend
 npm run start:mcp
+npm run start:landing
 ```
 
 The old CRUD examples remain available through:
@@ -137,6 +152,7 @@ europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/crud-frontend
 europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/general-ai-agent
 europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/customer-portal
 europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/triz-mcp-server
+europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/research-landing
 ```
 
 Run `.github/workflows/infra-bootstrap.yml` manually once before the first deploy. It enables required APIs, creates Firestore if missing, and creates the `cloud-run-apps` Artifact Registry repository.
@@ -150,9 +166,11 @@ After that:
 - changes under `apps/examples/backend/**` deploy only `crud-backend`;
 - changes under `apps/examples/frontend/**` deploy only `crud-frontend`;
 - changes under `apps/general-ai-agent/**` deploy only `general-ai-agent`;
+- changes under `apps/landing-page/**` deploy only `research-landing`;
 - changes under `apps/customer-portal/**` deploy only `customer-portal`;
 - changes under `apps/triz-mcp-server/**` deploy only `triz-mcp-server`;
 - frontend workflows resolve the paired backend Cloud Run URL and build Angular with `API_URL=<backend-url>/api`;
+- the landing workflow resolves the `customer-portal` Cloud Run URL and builds Angular with `workspaceUrl=<customer-portal-url>`;
 - backend workflows set version metadata and CORS for the paired frontend regional URL.
 - `general-ai-agent` also sets `MCP_URL`, resolving `triz-mcp-server` automatically when `MCP_URL` is not configured manually.
 

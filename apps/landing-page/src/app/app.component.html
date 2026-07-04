@@ -1,0 +1,95 @@
+<header class="site-header">
+  <div class="nav-shell">
+    <a class="brand" [href]="workspaceUrl" aria-label="Open Idealab workspace">
+      <img src="assets/idealab-mark.svg" alt="" aria-hidden="true">
+      <span>Idealab</span>
+    </a>
+
+    <div class="platform-label">
+      <span>Research Platform</span>
+      <span aria-hidden="true">.</span>
+      <span>{{ versionLabel }}</span>
+    </div>
+
+    <a class="nav-action" [href]="workspaceUrl">Enter Workspace</a>
+  </div>
+</header>
+
+<main class="page-shell">
+  <section class="hero" aria-labelledby="landing-title">
+    <p class="status-pill">
+      <span aria-hidden="true"></span>
+      AI Laboratory &middot; Active
+    </p>
+
+    <h1 id="landing-title" aria-label="Solving Global Challenges with Artificial Intelligence">
+      <span aria-hidden="true">Solving Global</span>
+      <span aria-hidden="true">Challenges</span>
+      <em aria-hidden="true">with Artificial Intelligence</em>
+    </h1>
+
+    <p class="hero-copy">
+      An AI-assisted research environment focused on two of the world's most pressing
+      environmental problems - electronic waste and water systems.
+    </p>
+
+    <ul class="signal-list" aria-label="Platform capabilities">
+      @for (signal of platformSignals; track signal) {
+        <li>
+          <span class="signal-dot" aria-hidden="true"></span>
+          {{ signal }}
+        </li>
+      }
+    </ul>
+  </section>
+
+  <div class="section-divider" aria-hidden="true"></div>
+
+  <section class="tracks" aria-labelledby="tracks-title">
+    <div class="section-title">
+      <span aria-hidden="true"></span>
+      <h2 id="tracks-title">Environmental Tracks</h2>
+      <span aria-hidden="true"></span>
+    </div>
+
+    <div class="track-grid">
+      @for (track of tracks; track track.title) {
+        <article class="track-card">
+          <div class="track-heading">
+            <img [src]="track.iconSrc" alt="" aria-hidden="true">
+            <div>
+              <p>{{ track.label }}</p>
+              <h3>{{ track.title }}</h3>
+            </div>
+          </div>
+
+          <p class="track-description">{{ track.description }}</p>
+
+          <ul class="tag-list" [attr.aria-label]="track.title + ' focus areas'">
+            @for (tag of track.tags; track tag) {
+              <li>{{ tag }}</li>
+            }
+          </ul>
+        </article>
+      }
+    </div>
+  </section>
+
+  <section class="workspace-entry" aria-label="Workspace access">
+    <a class="primary-action" [href]="workspaceUrl">
+      <span aria-hidden="true">&rarr;</span>
+      Enter Workspace
+    </a>
+    <p>Select your research track inside the workspace</p>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-shell">
+    <a class="footer-brand" [href]="workspaceUrl" aria-label="Open Idealab workspace">
+      <img src="assets/idealab-mark.svg" alt="" aria-hidden="true">
+      <span>Idealab</span>
+    </a>
+    <p>Internal Research Platform &middot; {{ currentYear }}</p>
+  </div>
+</footer>
