@@ -30,11 +30,16 @@ export interface SolutionCard {
   title: string;
   summary: string;
   contradiction: string;
+  /** THE single best solution, presented to the user first. */
+  bestDirection: SolutionDirection | null;
+  /** One sentence explaining why bestDirection beats the alternatives. */
+  whyBest: string;
+  /** Runner-up directions, viewable but secondary. */
   directions: SolutionDirection[];
   nextSteps: string[];
   /** Chat-bubble version of the card, used instead of a separate summarize call. */
   chatSummary: string;
-  /** Method that produced the winning directions: "TRIZ", "SCAMPER" or "TRIZ + SCAMPER". */
+  /** Method that produced the best solution: "TRIZ", "SCAMPER" or "TRIZ + SCAMPER". */
   method: string;
   /** One sentence explaining why that method fit this problem best. */
   methodRationale: string;
@@ -45,6 +50,27 @@ const INTAKE_SYSTEM_PROMPT = loadPrompt('intake-system.md');
 const SUMMARY_SYSTEM_PROMPT = loadPrompt('summary-system.md');
 const SUGGEST_SYSTEM_PROMPT = loadPrompt('suggest-system.md');
 const CARD_SYSTEM_PROMPT = loadPrompt('card-system.md');
+
+const DIRECTION_ITEM_SCHEMA = {
+  type: 'object',
+  properties: {
+    principle: {
+      type: 'string',
+      description:
+        'source of the direction: TRIZ principle ("Zasada 1 — Segmentacja") or SCAMPER lens ("SCAMPER: Eliminacja")',
+    },
+    idea: {
+      type: 'string',
+      description: "1-2 sentences applying the principle concretely to the user's problem",
+    },
+    example: {
+      type: 'string',
+      description: 'one short real-world example of the principle; empty string if none',
+    },
+  },
+  required: ['principle', 'idea', 'example'],
+  additionalProperties: false,
+} as const;
 
 const CARD_SCHEMA = {
   type: 'object',
@@ -72,29 +98,21 @@ const CARD_SCHEMA = {
       description:
         'one short sentence in the user language explaining why the chosen method fit this problem better than the other',
     },
+    bestDirection: {
+      ...DIRECTION_ITEM_SCHEMA,
+      description:
+        'THE single best solution for this problem — the most concrete, feasible and novel direction, grounded in the tool outputs',
+    },
+    whyBest: {
+      type: 'string',
+      description:
+        'one short sentence in the user language explaining why bestDirection beats the alternative directions',
+    },
     directions: {
       type: 'array',
-      description: '2-4 winning solution directions grounded in the provided tool outputs',
-      items: {
-        type: 'object',
-        properties: {
-          principle: {
-            type: 'string',
-            description:
-              'source of the direction: TRIZ principle ("Zasada 1 — Segmentacja") or SCAMPER lens ("SCAMPER: Eliminacja")',
-          },
-          idea: {
-            type: 'string',
-            description: "1-2 sentences applying the principle concretely to the user's problem",
-          },
-          example: {
-            type: 'string',
-            description: 'one short real-world example of the principle; empty string if none',
-          },
-        },
-        required: ['principle', 'idea', 'example'],
-        additionalProperties: false,
-      },
+      description:
+        '1-3 alternative (runner-up) solution directions grounded in the provided tool outputs; MUST NOT repeat bestDirection',
+      items: DIRECTION_ITEM_SCHEMA,
     },
     nextSteps: {
       type: 'array',
@@ -105,11 +123,22 @@ const CARD_SCHEMA = {
       type: 'string',
       description:
         'chat-bubble version, max ~80 words: one plain sentence naming the trade-off, ' +
-        '2-3 one-line directions ("**principle** — idea"), one closing question; ' +
-        'mention that details are in the side panel',
+        'then THE best solution as one line ("**principle** — idea") with a clause saying why it wins, ' +
+        'one closing question; mention that the alternatives are in the side panel',
     },
   },
-  required: ['title', 'summary', 'contradiction', 'method', 'methodRationale', 'directions', 'nextSteps', 'chatSummary'],
+  required: [
+    'title',
+    'summary',
+    'contradiction',
+    'method',
+    'methodRationale',
+    'bestDirection',
+    'whyBest',
+    'directions',
+    'nextSteps',
+    'chatSummary',
+  ],
   additionalProperties: false,
 } as const;
 
@@ -420,17 +449,22 @@ export class AgentService {
           }),
         )) as Partial<SolutionCard> & { directions?: unknown[]; nextSteps?: unknown[] };
 
+        const toDirection = (d: unknown): SolutionDirection => {
+          const dir = d as Partial<SolutionDirection>;
+          return {
+            principle: String(dir?.principle ?? '').trim(),
+            idea: String(dir?.idea ?? '').trim(),
+            example: String(dir?.example ?? '').trim() || undefined,
+          };
+        };
+        const best = toDirection(result?.bestDirection);
+        const bestDirection = best.principle && best.idea ? best : null;
         const directions = (Array.isArray(result?.directions) ? result.directions : [])
-          .map((d) => {
-            const dir = d as Partial<SolutionDirection>;
-            return {
-              principle: String(dir?.principle ?? '').trim(),
-              idea: String(dir?.idea ?? '').trim(),
-              example: String(dir?.example ?? '').trim() || undefined,
-            };
-          })
+          .map(toDirection)
           .filter((d) => d.principle && d.idea)
-          .slice(0, 4);
+          // The winner is presented separately — drop it if the model repeated it.
+          .filter((d) => !bestDirection || d.principle !== bestDirection.principle)
+          .slice(0, 3);
         const nextSteps = (Array.isArray(result?.nextSteps) ? result.nextSteps : [])
           .map((s) => String(s ?? '').trim())
           .filter(Boolean)
@@ -440,6 +474,8 @@ export class AgentService {
           title: String(result?.title ?? '').trim(),
           summary: String(result?.summary ?? '').trim(),
           contradiction: String(result?.contradiction ?? '').trim(),
+          bestDirection,
+          whyBest: String(result?.whyBest ?? '').trim(),
           directions,
           nextSteps,
           chatSummary: String(result?.chatSummary ?? '').trim(),
@@ -447,7 +483,8 @@ export class AgentService {
           methodRationale: String((result as Partial<SolutionCard>)?.methodRationale ?? '').trim(),
         };
         this.logger.log(
-          `Solution card: "${card.title}" (method: ${card.method || 'n/a'}) with ${card.directions.length} direction(s), ${card.nextSteps.length} next step(s)`,
+          `Solution card: "${card.title}" (method: ${card.method || 'n/a'}, best: ${card.bestDirection?.principle ?? 'n/a'}) ` +
+            `with ${card.directions.length} alternative(s), ${card.nextSteps.length} next step(s)`,
         );
         return card;
       },

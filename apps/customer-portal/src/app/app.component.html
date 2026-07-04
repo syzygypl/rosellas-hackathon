@@ -78,8 +78,8 @@
         @if (!solutions().length) {
           <p class="muted">
             Tu pojawią się karty rozwiązań: sedno Twojego problemu prostymi słowami
-            i konkretne kierunki rozwiązań z metod TRIZ i SCAMPER — z zaznaczeniem,
-            która metoda wygrała dla Twojego problemu.
+            i jedno najlepsze rozwiązanie wybrane spośród metod TRIZ i SCAMPER,
+            z pozostałymi kierunkami do podejrzenia.
           </p>
         }
         @for (card of solutions(); track card.id) {
@@ -96,26 +96,58 @@
               <p class="summary">{{ card.sol.summary }}</p>
             }
 
-            @if (card.sol.methodRationale) {
-              <p class="method-rationale">🏆 {{ card.sol.methodRationale }}</p>
-            }
-
             @if (card.sol.contradiction) {
               <blockquote class="contradiction">⚖️ {{ card.sol.contradiction }}</blockquote>
             }
 
-            @if (card.sol.directions?.length) {
-              <div class="directions">
-                @for (direction of card.sol.directions; track $index) {
-                  <div class="direction">
-                    <h3>{{ direction.principle }}</h3>
-                    <p>{{ direction.idea }}</p>
-                    @if (direction.example) {
-                      <p class="example">💬 {{ direction.example }}</p>
-                    }
-                  </div>
+            @if (card.sol.bestDirection; as best) {
+              <div class="best-direction">
+                <span class="best-label">🏆 Najlepsze rozwiązanie</span>
+                <h3>{{ best.principle }}</h3>
+                <p>{{ best.idea }}</p>
+                @if (best.example) {
+                  <p class="example">💬 {{ best.example }}</p>
+                }
+                @if (card.sol.whyBest) {
+                  <p class="why-best">{{ card.sol.whyBest }}</p>
+                }
+                @if (card.sol.methodRationale) {
+                  <p class="method-rationale">{{ card.sol.methodRationale }}</p>
                 }
               </div>
+            } @else if (card.sol.methodRationale) {
+              <p class="method-rationale">🏆 {{ card.sol.methodRationale }}</p>
+            }
+
+            @if (card.sol.directions?.length) {
+              @if (card.sol.bestDirection) {
+                <details class="alternatives">
+                  <summary>🧭 Pozostałe kierunki ({{ card.sol.directions!.length }})</summary>
+                  <div class="directions">
+                    @for (direction of card.sol.directions; track $index) {
+                      <div class="direction">
+                        <h3>{{ direction.principle }}</h3>
+                        <p>{{ direction.idea }}</p>
+                        @if (direction.example) {
+                          <p class="example">💬 {{ direction.example }}</p>
+                        }
+                      </div>
+                    }
+                  </div>
+                </details>
+              } @else {
+                <div class="directions">
+                  @for (direction of card.sol.directions; track $index) {
+                    <div class="direction">
+                      <h3>{{ direction.principle }}</h3>
+                      <p>{{ direction.idea }}</p>
+                      @if (direction.example) {
+                        <p class="example">💬 {{ direction.example }}</p>
+                      }
+                    </div>
+                  }
+                </div>
+              }
             }
 
             @if (card.sol.nextSteps?.length) {
@@ -130,13 +162,13 @@
             }
 
             @if (card.reportHtml) {
-              <details [open]="!card.sol.directions?.length">
+              <details [open]="!card.sol.bestDirection && !card.sol.directions?.length">
                 <summary>📝 Pełny raport</summary>
                 <div class="report" [innerHTML]="card.reportHtml"></div>
               </details>
             }
 
-            <details class="tech" [open]="!card.sol.directions?.length">
+            <details class="tech" [open]="!card.sol.bestDirection && !card.sol.directions?.length">
               <summary>🔬 Szczegóły techniczne (TRIZ / SCAMPER)</summary>
 
               <details [open]="!card.reportHtml">

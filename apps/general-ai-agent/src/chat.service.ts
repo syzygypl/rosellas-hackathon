@@ -29,7 +29,11 @@ export interface ChatSolution {
   methodRationale?: string;
   /** 1-2 plain sentences about the problem, in the conversation language (agent path only). */
   summary?: string;
-  /** Humanized solution directions written by the LLM (agent path only). */
+  /** THE single best solution, presented to the user first (agent path only). */
+  bestDirection?: SolutionDirection;
+  /** One sentence explaining why bestDirection beats the alternatives (agent path only). */
+  whyBest?: string;
+  /** Alternative (runner-up) solution directions written by the LLM (agent path only). */
   directions?: SolutionDirection[];
   /** Suggested next steps for the user (agent path only). */
   nextSteps?: string[];
@@ -182,6 +186,8 @@ export class ChatService {
       solution.title = card.title || solution.title;
       solution.summary = card.summary || undefined;
       solution.contradiction = card.contradiction || solution.contradiction;
+      solution.bestDirection = card.bestDirection ?? undefined;
+      solution.whyBest = card.whyBest || undefined;
       solution.directions = card.directions.length ? card.directions : undefined;
       solution.nextSteps = card.nextSteps.length ? card.nextSteps : undefined;
       solution.method = card.method || undefined;

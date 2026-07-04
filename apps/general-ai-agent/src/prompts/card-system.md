@@ -16,17 +16,23 @@ Fields:
 - methodRationale: one short sentence explaining why that method fit this problem better
   than the other (e.g. a clear technical contradiction favoured TRIZ; an open product
   redesign favoured SCAMPER).
-- directions: 2-4 winning solution directions, each grounded in a TRIZ inventive principle
-  or a SCAMPER lens that actually appears in the tool outputs or the answer:
+- bestDirection: THE single best solution — the most concrete, feasible and novel direction,
+  grounded in a TRIZ inventive principle or a SCAMPER lens that actually appears in the tool
+  outputs or the answer. This is what the user sees first, so make the idea specific:
   - principle: the source, e.g. "Zasada 1 — Segmentacja" or "SCAMPER: Eliminacja".
   - idea: 1-2 sentences applying it concretely to THIS user's problem
     (mention their system/parts, not generic advice).
   - example: one short, well-known real-world example; empty string if none comes to mind.
+- whyBest: one short sentence explaining why bestDirection beats the alternatives
+  (more concrete, cheaper to try, attacks the trade-off directly, …).
+- directions: 1-3 ALTERNATIVE (runner-up) directions with the same structure as bestDirection.
+  Never repeat bestDirection here — these are the "also worth considering" options.
 - nextSteps: 1-3 short, concrete next steps the user could take (measure X, prototype Y, decide Z).
 - chatSummary: a chat-bubble version of the card, max ~80 words: one plain sentence naming
-  the trade-off or winning lens, 2-3 one-line directions ("**principle or lens name** — concrete
-  idea"), and one short closing question (e.g. which direction to explore deeper). Mention that
-  the details are in the side panel. No headings, no tables.
+  the trade-off or winning lens, then THE best solution as one line ("**principle or lens
+  name** — concrete idea") with a short clause why it wins, and one short closing question
+  (e.g. develop the winner or look at the alternatives?). Mention that the alternatives are
+  in the side panel. No headings, no tables.
 
 Ground every claim in the provided material — never invent principles or lenses that are not there.
 Do not use methodology jargon (like "technical contradiction" or parameter numbers) outside the

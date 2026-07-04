@@ -377,6 +377,48 @@ button[type='submit'] {
   color: #4a5a6a;
 }
 
+.best-direction {
+  margin: 8px 0;
+  padding: 10px 12px;
+  background: #f2faf4;
+  border: 1px solid #bfe4c9;
+  border-left: 4px solid #2e9e52;
+  border-radius: 8px;
+}
+
+.best-direction .best-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #1d6b34;
+}
+
+.best-direction h3 {
+  margin: 0 0 4px;
+  font-size: 0.92rem;
+}
+
+.best-direction p {
+  margin: 0 0 4px;
+  font-size: 0.88rem;
+}
+
+.best-direction .why-best {
+  font-style: italic;
+  color: #2c4a36;
+}
+
+.best-direction .method-rationale {
+  margin: 4px 0 0;
+}
+
+.alternatives summary {
+  color: #4a5a6a;
+}
+
 .card details {
   margin: 8px 0;
 }

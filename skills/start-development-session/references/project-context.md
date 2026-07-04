@@ -155,7 +155,7 @@ AI agent backend (`apps/general-ai-agent`, consumed by `apps/customer-portal`):
 | --- | --- | --- |
 | `GET` | `/api/health` | Health check. |
 | `GET` | `/api/version` | Application version, commit SHA, and build time. |
-| `POST` | `/api/chat` | Conversational solver running both TRIZ and SCAMPER, picking the best solution. Body: `{ messages: [{ role, content, solved? }] }` (max 40 messages, 8000 chars each). Returns `{ answer, engine, solution, suggestions?, warning? }`; `solution` carries the humanized side-panel card (`title`, `summary`, `contradiction`, `method`, `methodRationale`, `directions`, `nextSteps`) plus technical details (`parameters`, `principles`, `related`, `trail`, `report?`). |
+| `POST` | `/api/chat` | Conversational solver running both TRIZ and SCAMPER, picking the single best solution. Body: `{ sessionId?, messages: [{ role, content, solved? }] }` (max 40 messages, 8000 chars each). Returns `{ answer, engine, solution, suggestions?, warning? }`; `solution` leads with the winner (`bestDirection`, `whyBest`, `method`, `methodRationale`) and keeps runner-up `directions` viewable, plus the humanized card (`title`, `summary`, `contradiction`, `nextSteps`) and technical details (`parameters`, `principles`, `related`, `trail`, `report?`). |
 | `POST` | `/api/solve` | LLM-free deterministic TRIZ pipeline. Body: `{ problem }`. |
 | `POST` | `/api/agent/solve` | One-shot Deep Agent solve. Body: `{ problem }`; requires `OPENAI_API_KEY`. |
 

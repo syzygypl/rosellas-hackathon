@@ -101,10 +101,11 @@ per turn:
   worsens are all known — if not, the turn returns one short clarifying question
   (max 3 per conversation). After intake the agent runs BOTH methods (TRIZ
   contradiction analysis and the SCAMPER lens checklist), compares the candidate
-  solutions, and delivers the best ones; the solution card carries `method` and
-  `methodRationale` saying which method won and why. Long reports are compressed
-  to a ~80-word chat summary; the full report goes to the solution card. Prompts
-  live in `apps/general-ai-agent/src/prompts/*.md`.
+  solutions, and delivers ONE best solution (`bestDirection` + `whyBest`, with
+  `method`/`methodRationale` saying which method won and why); the runner-up
+  directions stay viewable as collapsed alternatives on the solution card. Long
+  reports are compressed to a ~80-word chat summary; the full report goes to the
+  solution card. Prompts live in `apps/general-ai-agent/src/prompts/*.md`.
 - **pipeline** (fallback, LLM-free) — the deterministic flow below; the
   response carries a configuration warning shown as a toast in the UI:
   1. `search_parameter` maps free text to TRIZ engineering parameters via semantic search.
