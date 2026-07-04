@@ -4,6 +4,7 @@ import { ChatOpenAI } from '@langchain/openai';
 import { AIMessage, ToolMessage, isAIMessage, isToolMessage } from '@langchain/core/messages';
 import { createDeepAgent } from 'deepagents';
 import { loadPrompt } from './prompt-loader';
+import { LangfuseTracingService } from './langfuse-tracing.service';
 
 export interface AgentToolCall {
   tool: string;
@@ -140,10 +141,12 @@ export class AgentService {
   private readonly reasoningEffort = (process.env.OPENAI_REASONING_EFFORT ||
     'low') as 'minimal' | 'low' | 'medium' | 'high';
   private agentPromise: Promise<ReturnType<typeof createDeepAgent>> | null = null;
-  private intakeModel: { invoke(input: unknown): Promise<unknown> } | null = null;
-  private suggestModel: { invoke(input: unknown): Promise<unknown> } | null = null;
-  private cardModel: { invoke(input: unknown): Promise<unknown> } | null = null;
+  private intakeModel: { invoke(input: unknown, options?: unknown): Promise<unknown> } | null = null;
+  private suggestModel: { invoke(input: unknown, options?: unknown): Promise<unknown> } | null = null;
+  private cardModel: { invoke(input: unknown, options?: unknown): Promise<unknown> } | null = null;
   private lightModel: ChatOpenAI | null = null;
+
+  constructor(private readonly tracing: LangfuseTracingService) {}
 
   isConfigured(): boolean {
     return Boolean(process.env.OPENAI_API_KEY?.trim());
@@ -193,8 +196,19 @@ export class AgentService {
   }
 
   async solve(problem: string): Promise<AgentSolveResult> {
-    const { answer, toolCalls } = await this.chat([{ role: 'user', content: problem }]);
-    return { problem, answer, toolCalls };
+    return this.tracing.trace(
+      'agent.solve',
+      {
+        input: { problem },
+        metadata: { route: 'POST /api/agent/solve', model: this.model, reasoningEffort: this.reasoningEffort },
+        tags: ['api', 'agent', 'solve'],
+        type: 'agent',
+      },
+      async () => {
+        const { answer, toolCalls } = await this.chat([{ role: 'user', content: problem }]);
+        return { problem, answer, toolCalls };
+      },
+    );
   }
 
   /**
@@ -206,25 +220,44 @@ export class AgentService {
   async intake(
     history: { role: 'user' | 'assistant'; content: string }[],
   ): Promise<{ complete: boolean; question: string; suggestions: string[] }> {
-    if (!this.intakeModel) {
-      this.intakeModel = new ChatOpenAI({
-        model: this.model,
-        reasoning: { effort: 'none' as any },
-        useResponsesApi: true,
-      }).withStructuredOutput(INTAKE_SCHEMA as any, { name: 'intake' });
-    }
-    const result = (await this.intakeModel.invoke([
-      { role: 'system', content: INTAKE_SYSTEM_PROMPT },
-      ...history.map((m) => ({ role: m.role, content: m.content })),
-    ])) as { complete?: boolean; question?: string; suggestions?: unknown[] };
+    return this.tracing.trace(
+      'agent.intake',
+      {
+        input: { history },
+        metadata: { model: this.model, messageCount: history.length },
+        tags: ['agent', 'intake'],
+        type: 'chain',
+      },
+      async () => {
+        if (!this.intakeModel) {
+          this.intakeModel = new ChatOpenAI({
+            model: this.model,
+            reasoning: { effort: 'none' as any },
+            useResponsesApi: true,
+          }).withStructuredOutput(INTAKE_SCHEMA as any, { name: 'intake' });
+        }
+        const result = (await this.intakeModel.invoke(
+          [
+            { role: 'system', content: INTAKE_SYSTEM_PROMPT },
+            ...history.map((m) => ({ role: m.role, content: m.content })),
+          ],
+          this.tracing.langchainConfig('agent.intake.llm', ['agent', 'intake'], {
+            model: this.model,
+            messageCount: history.length,
+          }),
+        )) as { complete?: boolean; question?: string; suggestions?: unknown[] };
 
-    const complete = Boolean(result?.complete);
-    const suggestions = (Array.isArray(result?.suggestions) ? result.suggestions : [])
-      .map((s) => String(s ?? '').trim())
-      .filter(Boolean)
-      .slice(0, 4);
-    this.logger.log(`Intake: complete=${complete}${complete ? '' : ` question="${result?.question}" suggestions=${JSON.stringify(suggestions)}`}`);
-    return { complete, question: String(result?.question ?? ''), suggestions };
+        const complete = Boolean(result?.complete);
+        const suggestions = (Array.isArray(result?.suggestions) ? result.suggestions : [])
+          .map((s) => String(s ?? '').trim())
+          .filter(Boolean)
+          .slice(0, 4);
+        this.logger.log(
+          `Intake: complete=${complete}${complete ? '' : ` question="${result?.question}" suggestions=${JSON.stringify(suggestions)}`}`,
+        );
+        return { complete, question: String(result?.question ?? ''), suggestions };
+      },
+    );
   }
 
   /**
@@ -232,24 +265,41 @@ export class AgentService {
    * clickable answer options when that message asks the user a question.
    */
   async suggestReplies(answer: string): Promise<string[]> {
-    if (!this.suggestModel) {
-      this.suggestModel = new ChatOpenAI({
-        model: this.model,
-        reasoning: { effort: 'none' as any },
-        useResponsesApi: true,
-      }).withStructuredOutput(SUGGEST_SCHEMA as any, { name: 'quick_replies' });
-    }
-    const result = (await this.suggestModel.invoke([
-      { role: 'system', content: SUGGEST_SYSTEM_PROMPT },
-      { role: 'user', content: answer },
-    ])) as { suggestions?: unknown[] };
+    return this.tracing.trace(
+      'agent.suggest_replies',
+      {
+        input: { answer },
+        metadata: { model: this.model, answerLength: answer.length },
+        tags: ['agent', 'suggestions'],
+        type: 'chain',
+      },
+      async () => {
+        if (!this.suggestModel) {
+          this.suggestModel = new ChatOpenAI({
+            model: this.model,
+            reasoning: { effort: 'none' as any },
+            useResponsesApi: true,
+          }).withStructuredOutput(SUGGEST_SCHEMA as any, { name: 'quick_replies' });
+        }
+        const result = (await this.suggestModel.invoke(
+          [
+            { role: 'system', content: SUGGEST_SYSTEM_PROMPT },
+            { role: 'user', content: answer },
+          ],
+          this.tracing.langchainConfig('agent.suggest_replies.llm', ['agent', 'suggestions'], {
+            model: this.model,
+            answerLength: answer.length,
+          }),
+        )) as { suggestions?: unknown[] };
 
-    const suggestions = (Array.isArray(result?.suggestions) ? result.suggestions : [])
-      .map((s) => String(s ?? '').trim())
-      .filter(Boolean)
-      .slice(0, 4);
-    this.logger.log(`Quick replies: ${JSON.stringify(suggestions)}`);
-    return suggestions;
+        const suggestions = (Array.isArray(result?.suggestions) ? result.suggestions : [])
+          .map((s) => String(s ?? '').trim())
+          .filter(Boolean)
+          .slice(0, 4);
+        this.logger.log(`Quick replies: ${JSON.stringify(suggestions)}`);
+        return suggestions;
+      },
+    );
   }
 
   /**
@@ -262,128 +312,185 @@ export class AgentService {
     toolCalls: AgentToolCall[],
     answer: string,
   ): Promise<SolutionCard> {
-    if (!this.cardModel) {
-      this.cardModel = new ChatOpenAI({
-        model: this.model,
-        reasoning: { effort: 'none' as any },
-        useResponsesApi: true,
-      }).withStructuredOutput(CARD_SCHEMA as any, { name: 'solution_card' });
-    }
-
-    const problem = history
-      .filter((m) => m.role === 'user')
-      .map((m) => m.content.trim())
-      .join('\n');
-    const toolDump = toolCalls
-      .map((c) => `### ${c.tool}(${JSON.stringify(c.args)})\n${c.output.slice(0, CARD_TOOL_OUTPUT_LIMIT)}`)
-      .join('\n\n');
-
-    const result = (await this.cardModel.invoke([
-      { role: 'system', content: CARD_SYSTEM_PROMPT },
+    return this.tracing.trace(
+      'agent.compose_solution_card',
       {
-        role: 'user',
-        content: [
-          `## User problem (their own words)`,
-          problem,
-          ``,
-          `## Assistant final answer`,
-          answer,
-          ``,
-          `## Raw TRIZ tool outputs`,
-          toolDump,
-        ].join('\n'),
+        input: { history, toolCalls, answer },
+        metadata: { model: this.model, messageCount: history.length, toolCallCount: toolCalls.length },
+        tags: ['agent', 'solution-card'],
+        type: 'chain',
       },
-    ])) as Partial<SolutionCard> & { directions?: unknown[]; nextSteps?: unknown[] };
+      async () => {
+        if (!this.cardModel) {
+          this.cardModel = new ChatOpenAI({
+            model: this.model,
+            reasoning: { effort: 'none' as any },
+            useResponsesApi: true,
+          }).withStructuredOutput(CARD_SCHEMA as any, { name: 'solution_card' });
+        }
 
-    const directions = (Array.isArray(result?.directions) ? result.directions : [])
-      .map((d) => {
-        const dir = d as Partial<SolutionDirection>;
-        return {
-          principle: String(dir?.principle ?? '').trim(),
-          idea: String(dir?.idea ?? '').trim(),
-          example: String(dir?.example ?? '').trim() || undefined,
+        const problem = history
+          .filter((m) => m.role === 'user')
+          .map((m) => m.content.trim())
+          .join('\n');
+        const toolDump = toolCalls
+          .map((c) => `### ${c.tool}(${JSON.stringify(c.args)})\n${c.output.slice(0, CARD_TOOL_OUTPUT_LIMIT)}`)
+          .join('\n\n');
+
+        const result = (await this.cardModel.invoke(
+          [
+            { role: 'system', content: CARD_SYSTEM_PROMPT },
+            {
+              role: 'user',
+              content: [
+                `## User problem (their own words)`,
+                problem,
+                ``,
+                `## Assistant final answer`,
+                answer,
+                ``,
+                `## Raw TRIZ tool outputs`,
+                toolDump,
+              ].join('\n'),
+            },
+          ],
+          this.tracing.langchainConfig('agent.compose_solution_card.llm', ['agent', 'solution-card'], {
+            model: this.model,
+            messageCount: history.length,
+            toolCallCount: toolCalls.length,
+          }),
+        )) as Partial<SolutionCard> & { directions?: unknown[]; nextSteps?: unknown[] };
+
+        const directions = (Array.isArray(result?.directions) ? result.directions : [])
+          .map((d) => {
+            const dir = d as Partial<SolutionDirection>;
+            return {
+              principle: String(dir?.principle ?? '').trim(),
+              idea: String(dir?.idea ?? '').trim(),
+              example: String(dir?.example ?? '').trim() || undefined,
+            };
+          })
+          .filter((d) => d.principle && d.idea)
+          .slice(0, 4);
+        const nextSteps = (Array.isArray(result?.nextSteps) ? result.nextSteps : [])
+          .map((s) => String(s ?? '').trim())
+          .filter(Boolean)
+          .slice(0, 3);
+
+        const card: SolutionCard = {
+          title: String(result?.title ?? '').trim(),
+          summary: String(result?.summary ?? '').trim(),
+          contradiction: String(result?.contradiction ?? '').trim(),
+          directions,
+          nextSteps,
         };
-      })
-      .filter((d) => d.principle && d.idea)
-      .slice(0, 4);
-    const nextSteps = (Array.isArray(result?.nextSteps) ? result.nextSteps : [])
-      .map((s) => String(s ?? '').trim())
-      .filter(Boolean)
-      .slice(0, 3);
-
-    const card: SolutionCard = {
-      title: String(result?.title ?? '').trim(),
-      summary: String(result?.summary ?? '').trim(),
-      contradiction: String(result?.contradiction ?? '').trim(),
-      directions,
-      nextSteps,
-    };
-    this.logger.log(
-      `Solution card: "${card.title}" with ${card.directions.length} direction(s), ${card.nextSteps.length} next step(s)`,
+        this.logger.log(
+          `Solution card: "${card.title}" with ${card.directions.length} direction(s), ${card.nextSteps.length} next step(s)`,
+        );
+        return card;
+      },
     );
-    return card;
   }
 
   /** Compress a long solution report into a short chat-friendly summary. */
   async summarize(report: string): Promise<string> {
-    if (!this.lightModel) {
-      this.lightModel = new ChatOpenAI({
-        model: this.model,
-        reasoning: { effort: 'none' as any },
-        useResponsesApi: true,
-      });
-    }
-    const res = await this.lightModel.invoke([
-      { role: 'system', content: SUMMARY_SYSTEM_PROMPT },
-      { role: 'user', content: report },
-    ]);
-    const text = this.contentToText(res.content);
-    this.logger.log(`Summarized report: ${report.length} -> ${text.length} chars`);
-    return text;
+    return this.tracing.trace(
+      'agent.summarize',
+      {
+        input: { report },
+        metadata: { model: this.model, reportLength: report.length },
+        tags: ['agent', 'summarize'],
+        type: 'chain',
+      },
+      async () => {
+        if (!this.lightModel) {
+          this.lightModel = new ChatOpenAI({
+            model: this.model,
+            reasoning: { effort: 'none' as any },
+            useResponsesApi: true,
+          });
+        }
+        const res = await this.lightModel.invoke(
+          [
+            { role: 'system', content: SUMMARY_SYSTEM_PROMPT },
+            { role: 'user', content: report },
+          ],
+          this.tracing.langchainConfig('agent.summarize.llm', ['agent', 'summarize'], {
+            model: this.model,
+            reportLength: report.length,
+          }),
+        );
+        const text = this.contentToText(res.content);
+        this.logger.log(`Summarized report: ${report.length} -> ${text.length} chars`);
+        return text;
+      },
+    );
   }
 
   /** Run the agent over a full chat history (multi-turn). */
   async chat(
     history: { role: 'user' | 'assistant'; content: string }[],
   ): Promise<{ answer: string; toolCalls: AgentToolCall[] }> {
-    if (!this.isConfigured()) {
-      throw new ServiceUnavailableException(this.configurationError());
-    }
+    return this.tracing.trace(
+      'agent.chat',
+      {
+        input: { history },
+        metadata: {
+          model: this.model,
+          reasoningEffort: this.reasoningEffort,
+          messageCount: history.length,
+        },
+        tags: ['agent', 'chat'],
+        type: 'agent',
+      },
+      async () => {
+        if (!this.isConfigured()) {
+          throw new ServiceUnavailableException(this.configurationError());
+        }
 
-    const agent = await this.getAgent();
-    const lastUser = [...history].reverse().find((m) => m.role === 'user');
-    this.logger.log(`Agent chatting (${history.length} message(s)): "${lastUser?.content ?? ''}"`);
+        const agent = await this.getAgent();
+        const lastUser = [...history].reverse().find((m) => m.role === 'user');
+        this.logger.log(`Agent chatting (${history.length} message(s)): "${lastUser?.content ?? ''}"`);
 
-    const result = await agent.invoke({
-      messages: history.map((m) => ({ role: m.role, content: m.content })),
-    });
+        const result = await agent.invoke(
+          {
+            messages: history.map((m) => ({ role: m.role, content: m.content })),
+          },
+          this.tracing.langchainConfig('agent.chat.langchain', ['agent', 'chat'], {
+            model: this.model,
+            reasoningEffort: this.reasoningEffort,
+            messageCount: history.length,
+          }),
+        );
 
-    // Pair each AI tool_call with the ToolMessage carrying its output.
-    const messages: unknown[] = (result as any).messages ?? [];
-    const outputsByCallId = new Map<string, string>();
-    for (const m of messages) {
-      if (isToolMessage(m as any)) {
-        const tm = m as ToolMessage;
-        outputsByCallId.set(String(tm.tool_call_id), this.contentToText(tm.content));
-      }
-    }
+        // Pair each AI tool_call with the ToolMessage carrying its output.
+        const messages: unknown[] = (result as any).messages ?? [];
+        const outputsByCallId = new Map<string, string>();
+        for (const m of messages) {
+          if (isToolMessage(m as any)) {
+            const tm = m as ToolMessage;
+            outputsByCallId.set(String(tm.tool_call_id), this.contentToText(tm.content));
+          }
+        }
 
-    const toolCalls: AgentToolCall[] = [];
-    let answer = '';
-    for (const m of messages) {
-      if (!isAIMessage(m as any)) continue;
-      const ai = m as AIMessage;
-      for (const call of ai.tool_calls ?? []) {
-        const output = outputsByCallId.get(String(call.id)) ?? '';
-        this.logger.log(`Tool call: ${call.name}(${JSON.stringify(call.args)})`);
-        toolCalls.push({ tool: call.name, args: call.args as Record<string, unknown>, output });
-      }
-      const text = this.contentToText(ai.content);
-      if (text) answer = text; // last non-empty AI message wins
-    }
+        const toolCalls: AgentToolCall[] = [];
+        let answer = '';
+        for (const m of messages) {
+          if (!isAIMessage(m as any)) continue;
+          const ai = m as AIMessage;
+          for (const call of ai.tool_calls ?? []) {
+            const output = outputsByCallId.get(String(call.id)) ?? '';
+            this.logger.log(`Tool call: ${call.name}(${JSON.stringify(call.args)})`);
+            toolCalls.push({ tool: call.name, args: call.args as Record<string, unknown>, output });
+          }
+          const text = this.contentToText(ai.content);
+          if (text) answer = text; // last non-empty AI message wins
+        }
 
-    this.logger.log(`Agent finished: ${toolCalls.length} tool call(s).`);
-    return { answer, toolCalls };
+        this.logger.log(`Agent finished: ${toolCalls.length} tool call(s).`);
+        return { answer, toolCalls };
+      },
+    );
   }
 
   private contentToText(content: unknown): string {

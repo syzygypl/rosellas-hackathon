@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { TrizMcpService, TrizParameter } from './triz-mcp.service';
+import { LangfuseTracingService } from './langfuse-tracing.service';
 
 export interface SolveRequest {
   /** The problem statement (free text). This is the only input — TRIZ derives the rest. */
@@ -30,9 +31,25 @@ const NO_PRINCIPLES = 'No Inventive Principles';
 export class SolverService {
   private readonly logger = new Logger(SolverService.name);
 
-  constructor(private readonly triz: TrizMcpService) {}
+  constructor(
+    private readonly triz: TrizMcpService,
+    private readonly tracing: LangfuseTracingService,
+  ) {}
 
   async solve(req: SolveRequest): Promise<SolveResult> {
+    return this.tracing.trace(
+      'solver.solve',
+      {
+        input: req,
+        metadata: { route: 'POST /api/solve', engine: 'pipeline' },
+        tags: ['solver', 'pipeline'],
+        type: 'chain',
+      },
+      () => this.solveInternal(req),
+    );
+  }
+
+  private async solveInternal(req: SolveRequest): Promise<SolveResult> {
     const trail: string[] = [];
     const problem = (req.problem || '').trim();
 

@@ -81,12 +81,17 @@ There are currently no dedicated test scripts in either package. Use builds as t
 
 Backend environment:
 
-- `PORT`: defaults to `8080`.
+- `BACKEND_PORT`: local backend port, defaults to `8080`.
+- `PORT`: production runtime port for Cloud Run; local backend starts ignore generic root `PORT` unless `NODE_ENV=production`.
 - `GOOGLE_CLOUD_PROJECT` or `GCLOUD_PROJECT`: project ID for Firebase Admin / Firestore.
 - `CORS_ORIGIN`: comma-separated allowed origins. Defaults locally to `http://localhost:4200` and `http://localhost:5000`.
 - `APP_VERSION`: displayed in Swagger and returned by `/api/version`; CI sets this from root `package.json`.
 - `GIT_SHA`: commit SHA returned by `/api/version`; CI sets this from `GITHUB_SHA`.
 - `BUILD_TIME`: UTC ISO timestamp returned by `/api/version`; CI sets this during deploy.
+- `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY`: optional; when both are set, the backend exports Langfuse traces for `/api/chat`, `/api/agent/solve`, `/api/solve`, LangChain model/agent calls, and Nest-side MCP tool calls.
+- `LANGFUSE_BASE_URL`: defaults to `https://cloud.langfuse.com`.
+- `LANGFUSE_TRACING_ENVIRONMENT`: optional Langfuse environment label; use `local` locally and a deployed label such as `production` in Cloud Run.
+- `LANGCHAIN_CALLBACKS_BACKGROUND`: defaults to `false` in the env template so LangChain callbacks finish predictably in Cloud Run-style runtimes.
 
 Frontend environment:
 
@@ -167,6 +172,15 @@ Required GitHub Actions variables:
 Required GitHub Actions secrets:
 
 - `EMBEDDING_API_KEY` for `triz-mcp-server`
+
+Optional GitHub Actions variables:
+
+- `LANGFUSE_PUBLIC_KEY` for optional `general-ai-agent` tracing
+
+Optional GitHub Actions secrets:
+
+- `OPENAI_API_KEY` for `general-ai-agent`
+- `LANGFUSE_SECRET_KEY` for optional `general-ai-agent` tracing
 
 Do not assume deployed URLs are current from memory. Use `docs/google-infra-links.md` first, then verify with GCP/GitHub only when the user asks for live validation.
 

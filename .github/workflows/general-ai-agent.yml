@@ -153,6 +153,17 @@ jobs:
             echo "OPENAI_API_KEY secret not set; deploying without the Deep Agent chat."
           fi
 
+          # Langfuse tracing: optional. Both public and secret keys are required.
+          if [ -n "${{ vars.LANGFUSE_PUBLIC_KEY }}" ] && [ -n "${{ secrets.LANGFUSE_SECRET_KEY }}" ]; then
+            ENV_VARS="$ENV_VARS@LANGFUSE_PUBLIC_KEY=${{ vars.LANGFUSE_PUBLIC_KEY }}"
+            ENV_VARS="$ENV_VARS@LANGFUSE_SECRET_KEY=${{ secrets.LANGFUSE_SECRET_KEY }}"
+            ENV_VARS="$ENV_VARS@LANGFUSE_BASE_URL=${{ vars.LANGFUSE_BASE_URL || 'https://cloud.langfuse.com' }}"
+            ENV_VARS="$ENV_VARS@LANGFUSE_TRACING_ENVIRONMENT=${{ vars.LANGFUSE_TRACING_ENVIRONMENT || 'production' }}"
+            ENV_VARS="$ENV_VARS@LANGCHAIN_CALLBACKS_BACKGROUND=false"
+          else
+            echo "Langfuse keys not set; deploying without Langfuse tracing."
+          fi
+
           echo "BACKEND_ENV_VARS=$ENV_VARS" >> "$GITHUB_ENV"
 
       - name: Deploy general-ai-agent to Cloud Run

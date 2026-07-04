@@ -2,6 +2,7 @@ import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
 import { AgentService, AgentToolCall, SolutionDirection } from './agent.service';
 import { SolverService } from './solver.service';
 import { TrizMcpService, TrizParameter } from './triz-mcp.service';
+import { LangfuseTracingService } from './langfuse-tracing.service';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -54,29 +55,44 @@ export class ChatService {
     private readonly agent: AgentService,
     private readonly solver: SolverService,
     private readonly triz: TrizMcpService,
+    private readonly tracing: LangfuseTracingService,
   ) {}
 
   async chat(req: ChatRequest): Promise<ChatResult> {
-    const messages = (req.messages || []).filter((m) => m?.content?.trim());
-    const lastUser = [...messages].reverse().find((m) => m.role === 'user');
-    if (!lastUser) {
-      return { answer: 'Opisz swój problem techniczny, a poszukam rozwiązań TRIZ.', engine: 'pipeline', solution: null };
-    }
+    return this.tracing.trace(
+      'api.chat',
+      {
+        input: req,
+        metadata: { route: 'POST /api/chat', messageCount: req.messages?.length ?? 0 },
+        tags: ['api', 'chat'],
+      },
+      async () => {
+        const messages = (req.messages || []).filter((m) => m?.content?.trim());
+        const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+        if (!lastUser) {
+          return {
+            answer: 'Opisz swój problem techniczny, a poszukam rozwiązań TRIZ.',
+            engine: 'pipeline',
+            solution: null,
+          };
+        }
 
-    if (this.agent.isConfigured()) {
-      try {
-        return await this.agentChat(messages, lastUser.content);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        this.logger.error(`Agent chat failed: ${message}`, err instanceof Error ? err.stack : undefined);
-        throw new ServiceUnavailableException(
-          `OpenAI agent failed; refusing silent fallback. ${message}`,
-        );
-      }
-    }
-    const result = await this.pipelineChat(messages);
-    result.warning = this.agent.configurationError();
-    return result;
+        if (this.agent.isConfigured()) {
+          try {
+            return await this.agentChat(messages, lastUser.content);
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            this.logger.error(`Agent chat failed: ${message}`, err instanceof Error ? err.stack : undefined);
+            throw new ServiceUnavailableException(
+              `OpenAI agent failed; refusing silent fallback. ${message}`,
+            );
+          }
+        }
+        const result = await this.pipelineChat(messages);
+        result.warning = this.agent.configurationError();
+        return result;
+      },
+    );
   }
 
   // --- Agent path -----------------------------------------------------------
