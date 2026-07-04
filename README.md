@@ -7,7 +7,7 @@ Nx workspace for the hackathon apps.
 - `apps/examples/backend/`: previous example NestJS API under `/api`, backed by Firestore.
 - `apps/examples/frontend/`: previous example Angular SPA served by nginx on Cloud Run.
 - root workspace: Nx monorepo with one root `package.json` and `package-lock.json`.
-- `.github/workflows/`: GitHub Actions workflows for infra bootstrap, backend deploy, and frontend deploy.
+- `.github/workflows/`: GitHub Actions workflows named after the Cloud Run services they deploy.
 - `skills/`: AI agent startup skills for Codex, Cursor, and Claude.
 
 ## Prereqs
@@ -112,6 +112,8 @@ MCP_URL=<deployed-or-private-triz-mcp-url>
 The workflows use one Artifact Registry Docker repository:
 
 ```text
+europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/crud-backend
+europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/crud-frontend
 europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/general-ai-agent
 europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/customer-portal
 ```
@@ -124,10 +126,13 @@ AI agent startup skills are centralized in [skills/](skills/), with entry points
 
 After that:
 
+- changes under `apps/examples/backend/**` deploy only `crud-backend`;
+- changes under `apps/examples/frontend/**` deploy only `crud-frontend`;
 - changes under `apps/general-ai-agent/**` deploy only `general-ai-agent`;
 - changes under `apps/customer-portal/**` deploy only `customer-portal`;
-- frontend deploy resolves the current backend Cloud Run URL and builds Angular with `API_URL=<backend-url>/api`;
-- backend deploy sets `MCP_URL` and, when the frontend service exists, `CORS_ORIGIN`.
+- frontend workflows resolve the paired backend Cloud Run URL and build Angular with `API_URL=<backend-url>/api`;
+- backend workflows set version metadata and CORS for the paired frontend regional URL.
+- `general-ai-agent` also sets `MCP_URL`.
 
 ## One-Time GCP IAM
 

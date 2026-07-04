@@ -55,6 +55,7 @@ For Angular frontends:
 ## Workflows And Docs
 
 - Update `.github/workflows/` when the app has an independent deploy path.
+- Name each deploy workflow after the Cloud Run service it deploys: `.github/workflows/<service-name>.yml` with `name: <service-name>`.
 - Include app paths, root package files, and Nx config in workflow path filters.
 - Update `README.md` for user-facing commands or runtime behavior.
 - Update `skills/start-development-session/references/project-context.md` for architecture, commands, deploy behavior, endpoints, or important paths.

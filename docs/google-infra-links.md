@@ -40,8 +40,10 @@ Docelowe obrazy używane przez workflowy:
 
 | Aplikacja | Obraz |
 | --- | --- |
-| Backend | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/general-ai-agent` |
-| Frontend | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/customer-portal` |
+| `crud-backend` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/crud-backend` |
+| `crud-frontend` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/crud-frontend` |
+| `general-ai-agent` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/general-ai-agent` |
+| `customer-portal` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/customer-portal` |
 
 Zweryfikowane smoke buildy z obecnego repo:
 
@@ -120,8 +122,10 @@ Te linki nie są częścią GCP, ale są punktem wejścia do deployu tej infrast
 | Workflow | URL |
 | --- | --- |
 | Infra Bootstrap | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/infra-bootstrap.yml |
-| Backend Deploy | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/backend-deploy.yml |
-| Frontend Deploy | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/frontend-deploy.yml |
+| `crud-backend` | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/crud-backend.yml |
+| `crud-frontend` | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/crud-frontend.yml |
+| `general-ai-agent` | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/general-ai-agent.yml |
+| `customer-portal` | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/customer-portal.yml |
 
 Ustawione GitHub Actions variables:
 

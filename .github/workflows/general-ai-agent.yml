@@ -1,4 +1,4 @@
-name: Frontend Deploy
+name: general-ai-agent
 
 on:
   push:
@@ -6,10 +6,11 @@ on:
       - main
       - master
     paths:
-      - 'apps/customer-portal/**'
+      - 'apps/general-ai-agent/**'
       - 'package.json'
       - 'package-lock.json'
       - 'nx.json'
+      - '.github/workflows/general-ai-agent.yml'
   workflow_dispatch:
 
 permissions:
@@ -21,13 +22,14 @@ env:
   BACKEND_SERVICE: general-ai-agent
   CLOUD_BUILD_SOURCE_BUCKET: ${{ vars.CLOUD_BUILD_SOURCE_BUCKET || 'crud-hackathon-ml-20260703-github-cloud-build-source' }}
   FRONTEND_SERVICE: customer-portal
-  IMAGE_NAME: customer-portal
+  IMAGE_NAME: general-ai-agent
+  PROJECT_NUMBER: ${{ vars.GCP_PROJECT_NUMBER || '59918194944' }}
   REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
 
 jobs:
   deploy:
-    name: Build and deploy frontend
+    name: Build and deploy general-ai-agent
     runs-on: ubuntu-latest
 
     steps:
@@ -52,14 +54,6 @@ jobs:
         with:
           project_id: ${{ env.PROJECT_ID }}
 
-      - name: Resolve backend URL
-        run: |
-          BACKEND_URL="$(gcloud run services describe "$BACKEND_SERVICE" \
-            --region "$REGION" \
-            --project "$PROJECT_ID" \
-            --format='value(status.url)')"
-          echo "API_URL=$BACKEND_URL/api" >> "$GITHUB_ENV"
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -67,23 +61,25 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Build Angular frontend
+      - name: Build general-ai-agent
         run: |
           APP_VERSION="$(node -p "require('./package.json').version")"
           BUILD_TIME="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-          printf "export const environment = {\n  production: true,\n  apiUrl: '%s',\n  appVersion: '%s',\n  buildSha: '%s',\n  buildTime: '%s',\n};\n" "$API_URL" "$APP_VERSION" "$GITHUB_SHA" "$BUILD_TIME" > apps/customer-portal/src/environments/environment.prod.ts
+          echo "APP_VERSION=$APP_VERSION" >> "$GITHUB_ENV"
+          echo "BUILD_TIME=$BUILD_TIME" >> "$GITHUB_ENV"
           npm ci
-          npm run build:frontend
+          npm run build:backend
 
-      - name: Build and publish frontend image
+      - name: Build and publish general-ai-agent image
         run: |
           IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$ARTIFACT_REPOSITORY/$IMAGE_NAME:$GITHUB_SHA"
-          BUILD_ID="$(gcloud builds submit apps/customer-portal \
+          BUILD_ID="$(gcloud builds submit . \
+            --config apps/general-ai-agent/cloudbuild.yaml \
             --gcs-source-staging-dir "gs://$CLOUD_BUILD_SOURCE_BUCKET/source" \
             --gcs-log-dir "gs://$CLOUD_BUILD_SOURCE_BUCKET/logs" \
+            --substitutions "_IMAGE=$IMAGE" \
             --async \
             --format='value(id)' \
-            --tag "$IMAGE" \
             --project "$PROJECT_ID")"
 
           echo "Cloud Build: https://console.cloud.google.com/cloud-build/builds/$BUILD_ID?project=$PROJECT_ID"
@@ -108,11 +104,33 @@ jobs:
           test "$STATUS" = "SUCCESS"
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
 
-      - name: Deploy frontend to Cloud Run
+      - name: Resolve general-ai-agent environment
         run: |
-          gcloud run deploy "$FRONTEND_SERVICE" \
+          ENV_VARS="^@^MCP_URL=${{ vars.MCP_URL }}@GOOGLE_CLOUD_PROJECT=$PROJECT_ID@APP_VERSION=$APP_VERSION@GIT_SHA=$GITHUB_SHA@BUILD_TIME=$BUILD_TIME"
+          REGIONAL_FRONTEND_URL="https://$FRONTEND_SERVICE-$PROJECT_NUMBER.$REGION.run.app"
+
+          if FRONTEND_URL="$(gcloud run services describe "$FRONTEND_SERVICE" \
+              --region "$REGION" \
+              --project "$PROJECT_ID" \
+              --format='value(status.url)' 2>/dev/null)"; then
+            if [ "$FRONTEND_URL" = "$REGIONAL_FRONTEND_URL" ]; then
+              CORS_ORIGIN="$FRONTEND_URL"
+            else
+              CORS_ORIGIN="$FRONTEND_URL,$REGIONAL_FRONTEND_URL"
+            fi
+          else
+            CORS_ORIGIN="$REGIONAL_FRONTEND_URL"
+          fi
+
+          ENV_VARS="$ENV_VARS@CORS_ORIGIN=$CORS_ORIGIN"
+          echo "BACKEND_ENV_VARS=$ENV_VARS" >> "$GITHUB_ENV"
+
+      - name: Deploy general-ai-agent to Cloud Run
+        run: |
+          gcloud run deploy "$BACKEND_SERVICE" \
             --image "$IMAGE" \
             --region "$REGION" \
             --project "$PROJECT_ID" \
             --allow-unauthenticated \
+            --set-env-vars "$BACKEND_ENV_VARS" \
             --quiet

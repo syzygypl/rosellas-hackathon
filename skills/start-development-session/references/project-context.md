@@ -5,10 +5,12 @@ Use this document to load the Rosellas Hackathon project context before changing
 ## Project Snapshot
 
 - Repository: `rosellas-hackathon`
-- Purpose: small two-service CRUD demo on Google Cloud Run.
+- Purpose: hackathon Nx workspace with deployed Cloud Run apps and retained CRUD examples.
 - Workspace: Nx 23 monorepo with a single root `package.json` and `package-lock.json`.
-- Frontend: Angular 19 standalone SPA served by nginx from `apps/examples/frontend/`.
-- Backend: NestJS 10 API from `apps/examples/backend/`, globally prefixed with `/api`.
+- Main frontend: Angular 19 standalone SPA served by nginx from `apps/customer-portal/`.
+- Main backend: NestJS 10 API from `apps/general-ai-agent/`, globally prefixed with `/api`.
+- Example frontend: Angular 19 standalone SPA served by nginx from `apps/examples/frontend/`.
+- Example backend: NestJS 10 CRUD API from `apps/examples/backend/`, globally prefixed with `/api`.
 - Database: Google Firestore Native, default database, `items` collection.
 - Deployment: GitHub Actions authenticates to GCP through Workload Identity Federation, Cloud Build builds Docker images, Artifact Registry stores them, Cloud Run serves frontend and backend.
 - Primary region: `europe-west1`.
@@ -33,7 +35,7 @@ Use this document to load the Rosellas Hackathon project context before changing
 | Frontend app | `apps/examples/frontend/src/app/` | Standalone Angular component, model, service, styles. |
 | Frontend env | `apps/examples/frontend/src/environments/` | Local default API URL is `http://localhost:8080/api`; workflow rewrites prod env during deploy. |
 | Cloud Run images | `apps/examples/backend/Dockerfile`, `apps/examples/frontend/Dockerfile` | Service-specific container packaging. GitHub Actions builds Nx artifacts before Docker packaging. Backend uses `apps/examples/backend/cloudbuild.yaml` with repository root context. |
-| Deploy workflows | `.github/workflows/` | Infra bootstrap, backend deploy, frontend deploy. |
+| Deploy workflows | `.github/workflows/` | Infra bootstrap plus service-specific workflows named after Cloud Run services. |
 | Infra links | `docs/google-infra-links.md` | Current resource URLs and GCP identifiers. |
 | Versioning docs | `docs/versioning/README.md` | Shared app version, build metadata, Swagger, UI badge, and workflow conventions. |
 | New app skill | `skills/add-new-application/SKILL.md` | Procedure for adding Nx applications under repo conventions. |
@@ -80,7 +82,7 @@ Frontend environment:
 
 - Local Angular env points to `http://localhost:8080/api`.
 - Local Angular env includes `appVersion`, `buildSha`, and `buildTime` fields used by the UI version badge.
-- `frontend-deploy.yml` resolves the current backend Cloud Run URL and rewrites `apps/examples/frontend/src/environments/environment.prod.ts` with `<backend-url>/api` plus frontend build metadata during the CI build.
+- Frontend deploy workflows resolve the paired backend Cloud Run URL and rewrite the app production environment with `<backend-url>/api` plus frontend build metadata during the CI build.
 
 Versioning details and the checklist for new apps live in `docs/versioning/README.md`.
 
@@ -114,8 +116,12 @@ When changing the item shape, update the backend DTOs/service and the frontend m
 GitHub Actions workflows:
 
 - `infra-bootstrap.yml`: enables required Google APIs, ensures Firestore, and ensures the `cloud-run-apps` Artifact Registry repository.
-- `backend-deploy.yml`: runs `npm ci`, builds `backend` through Nx, packages the prebuilt backend artifact with Docker, pushes `crud-backend`, resolves frontend origin for CORS, and deploys Cloud Run.
-- `frontend-deploy.yml`: resolves backend URL, runs `npm ci`, builds Angular through Nx with the deployed API URL, packages the prebuilt frontend artifact with Docker, pushes `crud-frontend`, and deploys Cloud Run.
+- `crud-backend.yml`: builds `apps/examples/backend` through Nx, packages the prebuilt artifact with Docker, pushes `crud-backend`, and deploys Cloud Run.
+- `crud-frontend.yml`: resolves `crud-backend`, builds `apps/examples/frontend` through Nx, packages the prebuilt artifact with Docker, pushes `crud-frontend`, and deploys Cloud Run.
+- `general-ai-agent.yml`: builds `apps/general-ai-agent` through Nx, packages the prebuilt artifact with Docker, pushes `general-ai-agent`, sets `MCP_URL`, and deploys Cloud Run.
+- `customer-portal.yml`: resolves `general-ai-agent`, builds `apps/customer-portal` through Nx, packages the prebuilt artifact with Docker, pushes `customer-portal`, and deploys Cloud Run.
+
+Workflow files and workflow `name` values should match the Cloud Run service they deploy.
 
 Required GitHub Actions variables:
 
@@ -123,6 +129,7 @@ Required GitHub Actions variables:
 - `GCP_REGION`
 - `WIF_PROVIDER`
 - `GCP_SERVICE_ACCOUNT`
+- `MCP_URL` for `general-ai-agent`
 
 Do not assume deployed URLs are current from memory. Use `docs/google-infra-links.md` first, then verify with GCP/GitHub only when the user asks for live validation.
 

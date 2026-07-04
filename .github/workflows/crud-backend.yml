@@ -1,4 +1,4 @@
-name: Backend Deploy
+name: crud-backend
 
 on:
   push:
@@ -6,10 +6,11 @@ on:
       - main
       - master
     paths:
-      - 'apps/general-ai-agent/**'
+      - 'apps/examples/backend/**'
       - 'package.json'
       - 'package-lock.json'
       - 'nx.json'
+      - '.github/workflows/crud-backend.yml'
   workflow_dispatch:
 
 permissions:
@@ -18,17 +19,17 @@ permissions:
 
 env:
   ARTIFACT_REPOSITORY: cloud-run-apps
-  BACKEND_SERVICE: general-ai-agent
+  BACKEND_SERVICE: crud-backend
   CLOUD_BUILD_SOURCE_BUCKET: ${{ vars.CLOUD_BUILD_SOURCE_BUCKET || 'crud-hackathon-ml-20260703-github-cloud-build-source' }}
-  FRONTEND_SERVICE: customer-portal
-  IMAGE_NAME: general-ai-agent
+  FRONTEND_SERVICE: crud-frontend
+  IMAGE_NAME: crud-backend
   PROJECT_NUMBER: ${{ vars.GCP_PROJECT_NUMBER || '59918194944' }}
   REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
 
 jobs:
   deploy:
-    name: Build and deploy backend
+    name: Build and deploy crud-backend
     runs-on: ubuntu-latest
 
     steps:
@@ -60,20 +61,20 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Build backend
+      - name: Build crud-backend
         run: |
           APP_VERSION="$(node -p "require('./package.json').version")"
           BUILD_TIME="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
           echo "APP_VERSION=$APP_VERSION" >> "$GITHUB_ENV"
           echo "BUILD_TIME=$BUILD_TIME" >> "$GITHUB_ENV"
           npm ci
-          npm run build:backend
+          npm run build:example-backend
 
-      - name: Build and publish backend image
+      - name: Build and publish crud-backend image
         run: |
           IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$ARTIFACT_REPOSITORY/$IMAGE_NAME:$GITHUB_SHA"
           BUILD_ID="$(gcloud builds submit . \
-            --config apps/general-ai-agent/cloudbuild.yaml \
+            --config apps/examples/backend/cloudbuild.yaml \
             --gcs-source-staging-dir "gs://$CLOUD_BUILD_SOURCE_BUCKET/source" \
             --gcs-log-dir "gs://$CLOUD_BUILD_SOURCE_BUCKET/logs" \
             --substitutions "_IMAGE=$IMAGE" \
@@ -103,28 +104,28 @@ jobs:
           test "$STATUS" = "SUCCESS"
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
 
-      - name: Resolve backend environment
+      - name: Resolve crud-backend environment
         run: |
-          ENV_VARS="^@^MCP_URL=${{ vars.MCP_URL }}@GOOGLE_CLOUD_PROJECT=$PROJECT_ID@APP_VERSION=$APP_VERSION@GIT_SHA=$GITHUB_SHA@BUILD_TIME=$BUILD_TIME"
+          ENV_VARS="^@^GOOGLE_CLOUD_PROJECT=$PROJECT_ID@APP_VERSION=$APP_VERSION@GIT_SHA=$GITHUB_SHA@BUILD_TIME=$BUILD_TIME"
+          REGIONAL_FRONTEND_URL="https://$FRONTEND_SERVICE-$PROJECT_NUMBER.$REGION.run.app"
 
           if FRONTEND_URL="$(gcloud run services describe "$FRONTEND_SERVICE" \
               --region "$REGION" \
               --project "$PROJECT_ID" \
               --format='value(status.url)' 2>/dev/null)"; then
-            REGIONAL_URL="https://$FRONTEND_SERVICE-$PROJECT_NUMBER.$REGION.run.app"
-
-            if [ "$FRONTEND_URL" = "$REGIONAL_URL" ]; then
+            if [ "$FRONTEND_URL" = "$REGIONAL_FRONTEND_URL" ]; then
               CORS_ORIGIN="$FRONTEND_URL"
             else
-              CORS_ORIGIN="$FRONTEND_URL,$REGIONAL_URL"
+              CORS_ORIGIN="$FRONTEND_URL,$REGIONAL_FRONTEND_URL"
             fi
-
-            ENV_VARS="$ENV_VARS@CORS_ORIGIN=$CORS_ORIGIN"
+          else
+            CORS_ORIGIN="$REGIONAL_FRONTEND_URL"
           fi
 
+          ENV_VARS="$ENV_VARS@CORS_ORIGIN=$CORS_ORIGIN"
           echo "BACKEND_ENV_VARS=$ENV_VARS" >> "$GITHUB_ENV"
 
-      - name: Deploy backend to Cloud Run
+      - name: Deploy crud-backend to Cloud Run
         run: |
           gcloud run deploy "$BACKEND_SERVICE" \
             --image "$IMAGE" \
