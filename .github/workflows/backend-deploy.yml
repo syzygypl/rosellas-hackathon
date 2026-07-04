@@ -54,6 +54,7 @@ jobs:
           IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$ARTIFACT_REPOSITORY/$IMAGE_NAME:$GITHUB_SHA"
           gcloud builds submit backend \
             --gcs-source-staging-dir "gs://$CLOUD_BUILD_SOURCE_BUCKET/source" \
+            --suppress-logs \
             --tag "$IMAGE" \
             --project "$PROJECT_ID"
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
