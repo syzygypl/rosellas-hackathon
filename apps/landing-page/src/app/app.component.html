@@ -1,6 +1,6 @@
 <header class="site-header">
   <div class="nav-shell">
-    <a class="brand" [href]="workspaceUrl" aria-label="Open Idealab workspace">
+    <a class="brand" href="/" aria-label="Open Idealab landing page">
       <img src="assets/idealab-mark.svg" alt="" aria-hidden="true">
       <span>Idealab</span>
     </a>
@@ -11,82 +11,142 @@
       <span>{{ versionLabel }}</span>
     </div>
 
-    <a class="btn nav-action" [href]="workspaceUrl">Enter Workspace</a>
+    <div class="nav-links">
+      <a class="label nav-link" href="/investors">For Investors</a>
+      <a class="btn nav-action" [href]="workspaceUrl">Enter Workspace</a>
+    </div>
   </div>
 </header>
 
 <main class="page-shell">
-  <section class="hero" aria-labelledby="landing-title">
-    <p class="label status-pill">
-      <span aria-hidden="true"></span>
-      AI Laboratory &middot; Active
-    </p>
+  @if (!isInvestorsPage) {
+    <section class="hero" aria-labelledby="landing-title">
+      <p class="label status-pill">
+        <span aria-hidden="true"></span>
+        AI Laboratory &middot; Active
+      </p>
 
-    <h1 id="landing-title" aria-label="Solving Global Challenges with Artificial Intelligence">
-      <span aria-hidden="true">Solving Global</span>
-      <span aria-hidden="true">Challenges</span>
-      <em aria-hidden="true">with Artificial Intelligence</em>
-    </h1>
+      <h1 id="landing-title" aria-label="Solving Global Challenges with Artificial Intelligence">
+        <span aria-hidden="true">Solving Global</span>
+        <span aria-hidden="true">Challenges</span>
+        <em aria-hidden="true">with Artificial Intelligence</em>
+      </h1>
 
-    <p class="hero-copy">
-      An AI-assisted research environment focused on two of the world's most pressing
-      environmental problems - electronic waste and water systems.
-    </p>
+      <p class="hero-copy">
+        An AI-assisted research environment focused on two of the world's most pressing
+        environmental problems - electronic waste and water systems.
+      </p>
 
-    <ul class="signal-list" aria-label="Platform capabilities">
-      @for (signal of platformSignals; track signal) {
-        <li>
-          <span class="signal-dot" aria-hidden="true"></span>
-          {{ signal }}
-        </li>
-      }
-    </ul>
-  </section>
+      <ul class="signal-list" aria-label="Platform capabilities">
+        @for (signal of platformSignals; track signal) {
+          <li>
+            <span class="signal-dot" aria-hidden="true"></span>
+            {{ signal }}
+          </li>
+        }
+      </ul>
+    </section>
 
-  <div class="section-divider" aria-hidden="true"></div>
+    <div class="section-divider" aria-hidden="true"></div>
 
-  <section class="tracks" aria-labelledby="tracks-title">
-    <div class="section-title">
-      <span aria-hidden="true"></span>
-      <h2 id="tracks-title" class="label">Environmental Tracks</h2>
-      <span aria-hidden="true"></span>
+    <section class="tracks" aria-labelledby="tracks-title">
+      <div class="section-title">
+        <span aria-hidden="true"></span>
+        <h2 id="tracks-title" class="label">Environmental Tracks</h2>
+        <span aria-hidden="true"></span>
+      </div>
+
+      <div class="track-grid">
+        @for (track of tracks; track track.title) {
+          <article class="track-card">
+            <div class="track-heading">
+              <img [src]="track.iconSrc" alt="" aria-hidden="true">
+              <div>
+                <p class="label">{{ track.label }}</p>
+                <h3>{{ track.title }}</h3>
+              </div>
+            </div>
+
+            <p class="track-description">{{ track.description }}</p>
+
+            <ul class="tag-list" [attr.aria-label]="track.title + ' focus areas'">
+              @for (tag of track.tags; track tag) {
+                <li>{{ tag }}</li>
+              }
+            </ul>
+          </article>
+        }
+      </div>
+    </section>
+
+    <section class="workspace-entry" aria-label="Workspace access">
+      <a class="btn primary-action" [href]="workspaceUrl">
+        <span aria-hidden="true">&rarr;</span>
+        Enter Workspace
+      </a>
+      <p>Select your research track inside the workspace</p>
+    </section>
+  } @else {
+    <section class="investor-hero" aria-labelledby="investors-title">
+      <p class="label status-pill">
+        <span aria-hidden="true"></span>
+        Investor Brief
+      </p>
+
+      <h1 id="investors-title">
+        <span>Idea Lab</span>
+        <em>from trade-off to testable idea</em>
+      </h1>
+
+      <p class="hero-copy">
+        Idea Lab is built for R&amp;D, sustainability, manufacturing, and policy
+        teams that need faster decisions around complex technical trade-offs.
+      </p>
+    </section>
+
+    <div class="investor-note">
+      <p class="investor-copy">
+        Classic deterministic tools need perfect inputs. Idea Lab lets teams start
+        in natural language, then grounds the result in TRIZ parameter search,
+        contradiction matrix lookup, inventive principles, and reusable solution cards.
+      </p>
+      <a class="secondary-action" [href]="workspaceUrl">See the workspace</a>
     </div>
 
-    <div class="track-grid">
-      @for (track of tracks; track track.title) {
-        <article class="track-card">
-          <div class="track-heading">
-            <img [src]="track.iconSrc" alt="" aria-hidden="true">
-            <div>
-              <p class="label">{{ track.label }}</p>
-              <h3>{{ track.title }}</h3>
-            </div>
-          </div>
+    <div class="section-divider" aria-hidden="true"></div>
 
-          <p class="track-description">{{ track.description }}</p>
-
-          <ul class="tag-list" [attr.aria-label]="track.title + ' focus areas'">
-            @for (tag of track.tags; track tag) {
-              <li>{{ tag }}</li>
-            }
-          </ul>
+    <div class="investor-grid">
+      @for (signal of investorSignals; track signal.label) {
+        <article class="investor-card">
+          <p class="label investor-value">{{ signal.value }}</p>
+          <h3>{{ signal.label }}</h3>
+          <p>{{ signal.description }}</p>
         </article>
       }
     </div>
-  </section>
 
-  <section class="workspace-entry" aria-label="Workspace access">
-    <a class="btn primary-action" [href]="workspaceUrl">
-      <span aria-hidden="true">&rarr;</span>
-      Enter Workspace
-    </a>
-    <p>Select your research track inside the workspace</p>
-  </section>
+    <section class="feature-section" aria-labelledby="features-title">
+      <div class="section-title">
+        <span aria-hidden="true"></span>
+        <h2 id="features-title" class="label">App Features</h2>
+        <span aria-hidden="true"></span>
+      </div>
+
+      <div class="feature-grid">
+        @for (feature of appFeatures; track feature.title) {
+          <article class="feature-card">
+            <h3>{{ feature.title }}</h3>
+            <p>{{ feature.description }}</p>
+          </article>
+        }
+      </div>
+    </section>
+  }
 </main>
 
 <footer class="site-footer">
   <div class="footer-shell">
-    <a class="footer-brand" [href]="workspaceUrl" aria-label="Open Idealab workspace">
+    <a class="footer-brand" href="/" aria-label="Open Idealab landing page">
       <img src="assets/idealab-mark.svg" alt="" aria-hidden="true">
       <span>Idealab</span>
     </a>

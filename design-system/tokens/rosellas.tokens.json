@@ -1,0 +1,512 @@
+{
+  "name": "Rosellas Idealab Design System",
+  "version": "0.1.0",
+  "description": "Repository-owned foundation tokens for the Rosellas Idealab research platform.",
+  "collections": [
+    {
+      "name": "Color",
+      "description": "Semantic colors for surfaces, text, borders, accents, and actions.",
+      "modes": [
+        {
+          "name": "Default",
+          "tokens": [
+            {
+              "name": "bg/paper",
+              "type": "COLOR",
+              "value": "#f8f7f4",
+              "description": "Primary page background.",
+              "codeSyntax": {
+                "WEB": "var(--rs-color-bg-paper)"
+              }
+            },
+            {
+              "name": "bg/elevated",
+              "type": "COLOR",
+              "value": "#ffffff",
+              "description": "Cards, badges, and elevated panels.",
+              "codeSyntax": {
+                "WEB": "var(--rs-color-bg-elevated)"
+              }
+            },
+            {
+              "name": "bg/muted",
+              "type": "COLOR",
+              "value": "#efede9",
+              "description": "Subtle chips and low-emphasis surfaces.",
+              "codeSyntax": {
+                "WEB": "var(--rs-color-bg-muted)"
+              }
+            },
+            {
+              "name": "text/primary",
+              "type": "COLOR",
+              "value": "#1f1f1d",
+              "description": "Primary text on light surfaces.",
+              "codeSyntax": {
+                "WEB": "var(--rs-color-text-primary)"
+              }
+            },
+            {
+              "name": "text/secondary",
+              "type": "COLOR",
+              "value": "#625f5a",
+              "description": "Body copy and supporting text.",
+              "codeSyntax": {
+                "WEB": "var(--rs-color-text-secondary)"
+              }
+            },
+            {
+              "name": "text/muted",
+              "type": "COLOR",
+              "value": "#9a9690",
+              "description": "Labels, captions, and low-emphasis text.",
+              "codeSyntax": {
+                "WEB": "var(--rs-color-text-muted)"
+              }
+            },
+            {
+              "name": "text/inverse",
+              "type": "COLOR",
+              "value": "#ffffff",
+              "description": "Text on dark actions and inverse surfaces.",
+              "codeSyntax": {
+                "WEB": "var(--rs-color-text-inverse)"
+              }
+            },
+            {
+              "name": "border/default",
+              "type": "COLOR",
+              "value": "#e1ddd7",
+              "description": "Default border on cards and badges.",
+              "codeSyntax": {
+                "WEB": "var(--rs-color-border-default)"
+              }
+            },
+            {
+              "name": "border/muted",
+              "type": "COLOR",
+              "value": "#e4e0da",
+              "description": "Section dividers and page chrome.",
+              "codeSyntax": {
+                "WEB": "var(--rs-color-border-muted)"
+              }
+            },
+            {
+              "name": "border/strong",
+              "type": "COLOR",
+              "value": "#ded9d2",
+              "description": "Chip borders and stronger separators.",
+              "codeSyntax": {
+                "WEB": "var(--rs-color-border-strong)"
+              }
+            },
+            {
+              "name": "accent/green",
+              "type": "COLOR",
+              "value": "#27c3a2",
+              "description": "Active status and environmental positive accent.",
+              "codeSyntax": {
+                "WEB": "var(--rs-color-accent-green)"
+              }
+            },
+            {
+              "name": "accent/green-bg",
+              "type": "COLOR",
+              "value": "#e6f8f3",
+              "description": "Soft green accent background.",
+              "codeSyntax": {
+                "WEB": "var(--rs-color-accent-green-bg)"
+              }
+            },
+            {
+              "name": "accent/blue",
+              "type": "COLOR",
+              "value": "#356fd9",
+              "description": "Water systems and analytical accent.",
+              "codeSyntax": {
+                "WEB": "var(--rs-color-accent-blue)"
+              }
+            },
+            {
+              "name": "accent/blue-bg",
+              "type": "COLOR",
+              "value": "#e8f0ff",
+              "description": "Soft blue accent background.",
+              "codeSyntax": {
+                "WEB": "var(--rs-color-accent-blue-bg)"
+              }
+            },
+            {
+              "name": "action/dark",
+              "type": "COLOR",
+              "value": "#222220",
+              "description": "Primary action background.",
+              "codeSyntax": {
+                "WEB": "var(--rs-color-action-dark)"
+              }
+            },
+            {
+              "name": "action/dark-hover",
+              "type": "COLOR",
+              "value": "#111110",
+              "description": "Primary action hover background.",
+              "codeSyntax": {
+                "WEB": "var(--rs-color-action-dark-hover)"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Typography",
+      "description": "Typography variables used to create Figma text styles and CSS text tokens.",
+      "modes": [
+        {
+          "name": "Default",
+          "tokens": [
+            {
+              "name": "font/display-serif",
+              "type": "STRING",
+              "value": "Cormorant Garamond, Georgia, Times New Roman, serif",
+              "description": "Narrative display family for hero and editorial headings.",
+              "codeSyntax": {
+                "WEB": "var(--rs-font-display-serif)"
+              }
+            },
+            {
+              "name": "font/ui-sans",
+              "type": "STRING",
+              "value": "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
+              "description": "UI family for body, labels, buttons, and dense surfaces.",
+              "codeSyntax": {
+                "WEB": "var(--rs-font-ui-sans)"
+              }
+            },
+            {
+              "name": "display/hero/font-size",
+              "type": "FLOAT",
+              "value": 64,
+              "description": "Hero display font size in px.",
+              "codeSyntax": {
+                "WEB": "var(--rs-type-display-hero-font-size)"
+              }
+            },
+            {
+              "name": "display/hero/line-height",
+              "type": "FLOAT",
+              "value": 0.95,
+              "description": "Hero display line-height multiplier.",
+              "codeSyntax": {
+                "WEB": "var(--rs-type-display-hero-line-height)"
+              }
+            },
+            {
+              "name": "display/hero/letter-spacing",
+              "type": "FLOAT",
+              "value": -0.03,
+              "description": "Hero display letter-spacing in em.",
+              "codeSyntax": {
+                "WEB": "var(--rs-type-display-hero-letter-spacing)"
+              }
+            },
+            {
+              "name": "display/hero-italic/font-size",
+              "type": "FLOAT",
+              "value": 56,
+              "description": "Italic hero display font size in px.",
+              "codeSyntax": {
+                "WEB": "var(--rs-type-display-hero-italic-font-size)"
+              }
+            },
+            {
+              "name": "heading/card-title/font-size",
+              "type": "FLOAT",
+              "value": 22,
+              "description": "Card title font size in px.",
+              "codeSyntax": {
+                "WEB": "var(--rs-type-heading-card-title-font-size)"
+              }
+            },
+            {
+              "name": "body/large/font-size",
+              "type": "FLOAT",
+              "value": 17,
+              "description": "Large body copy font size in px.",
+              "codeSyntax": {
+                "WEB": "var(--rs-type-body-large-font-size)"
+              }
+            },
+            {
+              "name": "body/regular/font-size",
+              "type": "FLOAT",
+              "value": 16,
+              "description": "Default body copy font size in px.",
+              "codeSyntax": {
+                "WEB": "var(--rs-type-body-regular-font-size)"
+              }
+            },
+            {
+              "name": "body/regular/line-height",
+              "type": "FLOAT",
+              "value": 1.6,
+              "description": "Default body copy line-height multiplier.",
+              "codeSyntax": {
+                "WEB": "var(--rs-type-body-regular-line-height)"
+              }
+            },
+            {
+              "name": "label/uppercase/font-size",
+              "type": "FLOAT",
+              "value": 11,
+              "description": "Micro label font size in px.",
+              "codeSyntax": {
+                "WEB": "var(--rs-type-label-uppercase-font-size)"
+              }
+            },
+            {
+              "name": "label/uppercase/letter-spacing",
+              "type": "FLOAT",
+              "value": 0.22,
+              "description": "Micro label letter-spacing in em.",
+              "codeSyntax": {
+                "WEB": "var(--rs-type-label-uppercase-letter-spacing)"
+              }
+            },
+            {
+              "name": "caption/muted/font-size",
+              "type": "FLOAT",
+              "value": 12,
+              "description": "Muted caption font size in px.",
+              "codeSyntax": {
+                "WEB": "var(--rs-type-caption-muted-font-size)"
+              }
+            },
+            {
+              "name": "button/uppercase/font-size",
+              "type": "FLOAT",
+              "value": 12,
+              "description": "Uppercase button font size in px.",
+              "codeSyntax": {
+                "WEB": "var(--rs-type-button-uppercase-font-size)"
+              }
+            },
+            {
+              "name": "button/uppercase/letter-spacing",
+              "type": "FLOAT",
+              "value": 0.08,
+              "description": "Uppercase button letter-spacing in em.",
+              "codeSyntax": {
+                "WEB": "var(--rs-type-button-uppercase-letter-spacing)"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Spacing",
+      "description": "Spacing scale for auto-layout gaps, padding, and section rhythm.",
+      "modes": [
+        {
+          "name": "Default",
+          "tokens": [
+            {
+              "name": "4",
+              "type": "FLOAT",
+              "value": 4,
+              "description": "4px spacing unit.",
+              "codeSyntax": {
+                "WEB": "var(--rs-space-4)"
+              }
+            },
+            {
+              "name": "8",
+              "type": "FLOAT",
+              "value": 8,
+              "description": "8px spacing unit.",
+              "codeSyntax": {
+                "WEB": "var(--rs-space-8)"
+              }
+            },
+            {
+              "name": "12",
+              "type": "FLOAT",
+              "value": 12,
+              "description": "12px spacing unit.",
+              "codeSyntax": {
+                "WEB": "var(--rs-space-12)"
+              }
+            },
+            {
+              "name": "16",
+              "type": "FLOAT",
+              "value": 16,
+              "description": "16px spacing unit.",
+              "codeSyntax": {
+                "WEB": "var(--rs-space-16)"
+              }
+            },
+            {
+              "name": "20",
+              "type": "FLOAT",
+              "value": 20,
+              "description": "20px spacing unit.",
+              "codeSyntax": {
+                "WEB": "var(--rs-space-20)"
+              }
+            },
+            {
+              "name": "24",
+              "type": "FLOAT",
+              "value": 24,
+              "description": "24px spacing unit.",
+              "codeSyntax": {
+                "WEB": "var(--rs-space-24)"
+              }
+            },
+            {
+              "name": "32",
+              "type": "FLOAT",
+              "value": 32,
+              "description": "32px spacing unit.",
+              "codeSyntax": {
+                "WEB": "var(--rs-space-32)"
+              }
+            },
+            {
+              "name": "40",
+              "type": "FLOAT",
+              "value": 40,
+              "description": "40px spacing unit.",
+              "codeSyntax": {
+                "WEB": "var(--rs-space-40)"
+              }
+            },
+            {
+              "name": "48",
+              "type": "FLOAT",
+              "value": 48,
+              "description": "48px spacing unit.",
+              "codeSyntax": {
+                "WEB": "var(--rs-space-48)"
+              }
+            },
+            {
+              "name": "64",
+              "type": "FLOAT",
+              "value": 64,
+              "description": "64px spacing unit.",
+              "codeSyntax": {
+                "WEB": "var(--rs-space-64)"
+              }
+            },
+            {
+              "name": "80",
+              "type": "FLOAT",
+              "value": 80,
+              "description": "80px spacing unit.",
+              "codeSyntax": {
+                "WEB": "var(--rs-space-80)"
+              }
+            },
+            {
+              "name": "96",
+              "type": "FLOAT",
+              "value": 96,
+              "description": "96px spacing unit.",
+              "codeSyntax": {
+                "WEB": "var(--rs-space-96)"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Radius",
+      "description": "Corner radius scale for controls, cards, and pills.",
+      "modes": [
+        {
+          "name": "Default",
+          "tokens": [
+            {
+              "name": "logo-small",
+              "type": "FLOAT",
+              "value": 5,
+              "description": "Small logo mark radius.",
+              "codeSyntax": {
+                "WEB": "var(--rs-radius-logo-small)"
+              }
+            },
+            {
+              "name": "control",
+              "type": "FLOAT",
+              "value": 8,
+              "description": "Default control and card radius.",
+              "codeSyntax": {
+                "WEB": "var(--rs-radius-control)"
+              }
+            },
+            {
+              "name": "control-large",
+              "type": "FLOAT",
+              "value": 12,
+              "description": "Large button radius.",
+              "codeSyntax": {
+                "WEB": "var(--rs-radius-control-large)"
+              }
+            },
+            {
+              "name": "pill",
+              "type": "FLOAT",
+              "value": 999,
+              "description": "Fully rounded pill radius.",
+              "codeSyntax": {
+                "WEB": "var(--rs-radius-pill)"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Shadow",
+      "description": "Named elevation shadows for product surfaces.",
+      "modes": [
+        {
+          "name": "Default",
+          "tokens": [
+            {
+              "name": "pill",
+              "type": "STRING",
+              "value": "0 10px 22px rgba(31, 31, 29, 0.05)",
+              "description": "Low elevation used by status pills.",
+              "codeSyntax": {
+                "WEB": "var(--rs-shadow-pill)"
+              }
+            },
+            {
+              "name": "card",
+              "type": "STRING",
+              "value": "0 12px 28px rgba(31, 31, 29, 0.06)",
+              "description": "Default card elevation.",
+              "codeSyntax": {
+                "WEB": "var(--rs-shadow-card)"
+              }
+            },
+            {
+              "name": "action",
+              "type": "STRING",
+              "value": "0 16px 24px rgba(31, 31, 29, 0.18)",
+              "description": "Primary action elevation.",
+              "codeSyntax": {
+                "WEB": "var(--rs-shadow-action)"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

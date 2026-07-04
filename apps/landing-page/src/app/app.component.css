@@ -63,16 +63,29 @@ a {
 }
 
 .nav-action {
-  justify-self: end;
   min-width: 190px;
   padding: 0 var(--space-18);
+}
+
+.nav-links {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+}
+
+.nav-link {
+  color: var(--color-body);
+  font-weight: var(--weight-heavy);
+  white-space: nowrap;
 }
 
 .page-shell {
   padding: var(--space-64) 0 var(--space-96);
 }
 
-.hero {
+.hero,
+.investor-hero {
   max-width: 680px;
 }
 
@@ -250,6 +263,121 @@ h1 em {
   line-height: 1;
 }
 
+.investor-copy {
+  margin: 0;
+  color: var(--color-body);
+  font-size: var(--text-lg);
+  line-height: var(--leading-relaxed);
+}
+
+.investor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-16);
+}
+
+.investor-card {
+  min-width: 0;
+  min-height: 184px;
+  padding: var(--space-24);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.investor-value {
+  margin: 0 0 var(--space-18);
+  color: var(--color-accent-ink);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-heavy);
+}
+
+.investor-card h3 {
+  margin-bottom: var(--space-12);
+  font-family: var(--font-serif);
+  font-size: var(--text-display-3);
+  font-weight: var(--weight-medium);
+  line-height: 1.12;
+}
+
+.investor-card p:last-child {
+  margin: 0;
+  color: var(--color-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+}
+
+.investor-note {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-24);
+  margin-top: var(--space-16);
+  padding: var(--space-20) var(--space-24);
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  border-radius: var(--radius-md);
+}
+
+.investor-note p {
+  margin: 0;
+  color: var(--color-on-primary-muted);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+}
+
+.secondary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 154px;
+  min-height: 40px;
+  padding: 0 var(--space-18);
+  color: var(--color-primary);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-heavy);
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.feature-section {
+  margin-top: var(--space-56);
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-16);
+}
+
+.feature-card {
+  min-width: 0;
+  min-height: 154px;
+  padding: var(--space-20);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.feature-card h3 {
+  margin-bottom: var(--space-12);
+  font-family: var(--font-serif);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-medium);
+  line-height: 1.16;
+}
+
+.feature-card p {
+  margin: 0;
+  color: var(--color-body);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+}
+
 .workspace-entry {
   display: grid;
   justify-items: center;
@@ -312,6 +440,20 @@ h1 em {
     grid-template-columns: 1fr;
   }
 
+  .investor-grid,
+  .feature-grid,
+  .investor-note {
+    grid-template-columns: 1fr;
+  }
+
+  .investor-note {
+    align-items: start;
+  }
+
+  .secondary-action {
+    width: min(240px, 100%);
+  }
+
   h1 {
     font-size: 3rem;
   }
@@ -336,6 +478,14 @@ h1 em {
   .nav-action {
     min-width: 132px;
     padding: 0 var(--space-12);
+    font-size: var(--text-2xs);
+  }
+
+  .nav-links {
+    gap: var(--space-10);
+  }
+
+  .nav-link {
     font-size: var(--text-2xs);
   }
 
@@ -378,6 +528,16 @@ h1 em {
 
   .track-description {
     min-height: 0;
+  }
+
+  .investor-card,
+  .feature-card {
+    min-height: 0;
+    padding: var(--space-20);
+  }
+
+  .investor-note {
+    padding: var(--space-20);
   }
 
   .footer-shell {

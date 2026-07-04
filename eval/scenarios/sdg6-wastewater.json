@@ -1,0 +1,52 @@
+{
+  "id": "sdg6-wastewater",
+  "title": "SDG 6: Wastewater treatment without traditional expansion",
+  "prompt": "Use TRIZ to solve this contradiction: A city must treat much more wastewater to a safe standard, but it cannot expand the traditional centralized treatment plant, reduce water quality, or rely on people simply stopping showers.",
+  "maxAnswerWords": 170,
+  "requiredCriteria": [
+    {
+      "id": "safe_standard",
+      "description": "Maintains or improves safety and water quality.",
+      "keywords": ["safe standard", "quality", "monitoring", "pathogen", "contaminant", "compliance", "safety"]
+    },
+    {
+      "id": "nontraditional_capacity",
+      "description": "Adds capacity without traditional plant expansion.",
+      "keywords": ["distributed", "modular", "satellite", "decentralized", "containerized", "retrofit", "point-of-use"]
+    },
+    {
+      "id": "reuse_or_load_reduction",
+      "description": "Uses reuse, source separation, or load smoothing.",
+      "keywords": ["reuse", "greywater", "source separation", "load", "peak", "buffer", "storage", "recirculation"]
+    }
+  ],
+  "positiveSignals": [
+    {
+      "id": "sensors_controls",
+      "description": "Monitoring and adaptive controls.",
+      "keywords": ["sensor", "real-time", "monitoring", "control", "digital", "automated"]
+    },
+    {
+      "id": "safety_barriers",
+      "description": "Redundant barriers and validation.",
+      "keywords": ["redundant", "barrier", "UV", "membrane", "chlorination", "fail-safe", "validation"]
+    }
+  ],
+  "forbiddenPatterns": [
+    {
+      "id": "traditional_expansion",
+      "description": "Depends on expanding the centralized plant.",
+      "patterns": ["expand\\s+the\\s+(centralized\\s+)?plant", "build\\s+a\\s+larger\\s+central(ized)?\\s+plant"]
+    },
+    {
+      "id": "quality_reduction",
+      "description": "Accepts lower treatment quality.",
+      "patterns": ["lower\\s+(the\\s+)?quality", "relax\\s+(safety\\s+)?standards", "treat\\s+to\\s+a\\s+lower\\s+standard"]
+    },
+    {
+      "id": "stop_showering",
+      "description": "Uses stopping showers as the answer.",
+      "patterns": ["stop\\s+showering", "ban\\s+showers", "people\\s+should\\s+not\\s+shower"]
+    }
+  ]
+}

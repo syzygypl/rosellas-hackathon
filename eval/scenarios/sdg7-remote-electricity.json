@@ -1,0 +1,47 @@
+{
+  "id": "sdg7-remote-electricity",
+  "title": "SDG 7: Remote electricity without battery-centric storage",
+  "prompt": "Use TRIZ to solve this contradiction: A remote rural region needs fast, reliable electricity for growing demand, but the solution cannot be centered on battery storage. It must work under harsh logistics and maintenance constraints.",
+  "maxAnswerWords": 170,
+  "requiredCriteria": [
+    {
+      "id": "fast_reliable_power",
+      "description": "Delivers fast and reliable rural electricity.",
+      "keywords": ["reliable", "fast", "rural", "uptime", "resilience", "maintenance", "availability"]
+    },
+    {
+      "id": "not_battery_centric",
+      "description": "Avoids battery-centric storage as the main architecture.",
+      "keywords": ["not battery-centric", "without batteries", "non-battery", "flywheel", "thermal", "pumped", "demand response", "dispatch"]
+    },
+    {
+      "id": "modular_microgrid",
+      "description": "Uses modular microgrids, hybrid generation, or dispatch/control.",
+      "keywords": ["microgrid", "modular", "hybrid", "solar", "wind", "micro-hydro", "biomass", "diesel", "dispatch", "control"]
+    }
+  ],
+  "positiveSignals": [
+    {
+      "id": "nonbattery_resilience",
+      "description": "Includes non-battery resilience mechanisms.",
+      "keywords": ["demand response", "load shifting", "thermal storage", "flywheel", "water pumping", "backup", "redundancy"]
+    },
+    {
+      "id": "maintenance_fit",
+      "description": "Fits remote maintenance and logistics constraints.",
+      "keywords": ["remote monitoring", "spares", "standardized", "maintenance", "local technicians", "rugged"]
+    }
+  ],
+  "forbiddenPatterns": [
+    {
+      "id": "battery_centric",
+      "description": "Centers the solution on batteries.",
+      "patterns": ["battery\\s+farm", "large\\s+battery", "battery-centric", "center(ed)?\\s+on\\s+batter(y|ies)"]
+    },
+    {
+      "id": "demand_freeze",
+      "description": "Solves by freezing or suppressing demand growth.",
+      "patterns": ["stop\\s+demand\\s+growth", "freeze\\s+demand", "ration\\s+electricity\\s+as\\s+the\\s+main"]
+    }
+  ]
+}

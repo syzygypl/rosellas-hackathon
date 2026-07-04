@@ -25,9 +25,11 @@ Nx workspace for the hackathon apps.
 - `apps/landing-page/`: static Angular landing page for the research platform, served by nginx on Cloud Run.
 - `apps/customer-portal/`: Angular CSR frontend and main customer-facing app.
 - `apps/triz-mcp-server/`: Python MCP server exposing TRIZ tools over Streamable HTTP.
+- `apps/figma-generator/`: Nx project wrapper for validating and building the local Figma design system plugin.
 - `apps/scamper-mcp-server/`: Python MCP server exposing SCAMPER ideation tools over Streamable HTTP.
 - `apps/examples/backend/`: previous example NestJS API under `/api`, backed by Firestore.
 - `apps/examples/frontend/`: previous example Angular SPA served by nginx on Cloud Run.
+- `design-system/`: repository-owned Idealab design system tokens and Figma UI kit manifest.
 - root workspace: Nx monorepo with one root `package.json` and `package-lock.json`.
 - `.github/workflows/`: GitHub Actions workflows named after the Cloud Run services they deploy.
 - `skills/`: AI agent startup skills for Codex, Cursor, and Claude.
@@ -200,6 +202,9 @@ npm run build:frontend
 npm run build:mcp
 npm run build:scamper
 npm run build:landing
+npm run build:figma-generator
+npm run design-system:validate
+npm run design-system:figma:plugin:build
 npm run start:backend
 npm run start:frontend
 npm run start:mcp
@@ -218,6 +223,33 @@ npm run start:example-frontend
 
 The frontend displays frontend and backend build metadata. The backend exposes the same metadata at `/api/version`, and Swagger is available at `/api/docs`.
 Versioning conventions for new applications are documented in [docs/versioning/README.md](docs/versioning/README.md).
+
+## Design System
+
+The Idealab mini design system is repository-driven. Tokens live in
+`design-system/tokens/rosellas.tokens.json`; the planned single-page Figma UI
+kit, text styles, components, patterns, and example screens live in
+`design-system/figma/ui-kit.json`.
+
+Validate the design system locally:
+
+```bash
+npm run design-system:validate
+npm run design-system:figma:plugin:build
+```
+
+The default Figma path is free: build the local plugin, then import
+`dist/apps/figma-generator/figma-plugin/manifest.json` in Figma Desktop through
+Plugins -> Development -> Import plugin from manifest. Running the plugin in a
+Figma file creates or updates Variables, text styles, one `Rosellas · Design
+System` page with sections, and component sets with variants from the repository
+tokens. After it finishes, the plugin selects the generated `Repository
+Components` frame on that page.
+
+The `.github/workflows/design-system.yml` workflow validates token and UI kit
+metadata and uploads the generated plugin as the `rosellas-figma-plugin`
+artifact on pull requests, pushes, and manual dispatch. More details are in
+[design-system/README.md](design-system/README.md).
 
 ## GitHub Actions Configuration
 
@@ -252,7 +284,7 @@ Run `.github/workflows/infra-bootstrap.yml` manually once before the first deplo
 
 Current GCP links and resource URLs are documented in [docs/google-infra-links.md](docs/google-infra-links.md).
 
-AI agent startup skills are centralized in [skills/](skills/), with entry points for Codex, Cursor, and Claude documented in [docs/ai/README.md](docs/ai/README.md). Use [skills/add-new-application/SKILL.md](skills/add-new-application/SKILL.md) when adding another application to the monorepo.
+AI agent startup skills are centralized in [skills/](skills/), with entry points for Codex, Cursor, and Claude documented in [docs/ai/README.md](docs/ai/README.md). Use [skills/add-new-application/SKILL.md](skills/add-new-application/SKILL.md) when adding another application to the monorepo, and [skills/generate-figma-design-system/SKILL.md](skills/generate-figma-design-system/SKILL.md) when changing or importing the Figma design system.
 
 After that:
 
@@ -262,6 +294,7 @@ After that:
 - changes under `apps/landing-page/**` deploy only `research-landing`;
 - changes under `apps/customer-portal/**` deploy only `customer-portal`;
 - changes under `apps/triz-mcp-server/**` deploy only `triz-mcp-server`;
+- changes under `apps/figma-generator/**`, `design-system/**`, or `tools/design-system/**` validate the design system and build the local Figma plugin artifact;
 - changes under `apps/scamper-mcp-server/**` deploy only `scamper-mcp-server`;
 - frontend workflows resolve the paired backend Cloud Run URL and build Angular with `API_URL=<backend-url>/api`;
 - the landing workflow resolves the `customer-portal` Cloud Run URL and builds Angular with `workspaceUrl=<customer-portal-url>`;

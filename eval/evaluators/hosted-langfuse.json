@@ -1,0 +1,93 @@
+{
+  "id": "hosted-langfuse",
+  "type": "hosted_langfuse",
+  "description": "Langfuse-hosted evaluator and rule definitions. Rules are pushed inactive unless eval:push is called with --enable.",
+  "evaluators": [
+    {
+      "type": "llm_as_judge",
+      "name": "rosellas.solution_quality",
+      "prompt": "Evaluate the Rosellas TRIZ response.\n\nScenario input:\n{{input}}\n\nAgent output:\n{{output}}\n\nScore 0 to 1 for: problem fit, TRIZ grounding, feasibility and safety, and compact usefulness.",
+      "outputDefinition": {
+        "dataType": "NUMERIC",
+        "reasoning": {
+          "description": "Briefly explain the score."
+        },
+        "score": {
+          "description": "Overall solution quality from 0 to 1."
+        }
+      },
+      "modelConfigFromEnv": {
+        "provider": "LANGFUSE_EVAL_PROVIDER",
+        "model": "LANGFUSE_EVAL_MODEL"
+      }
+    },
+    {
+      "type": "code",
+      "name": "rosellas.chat_contract",
+      "sourceCodeLanguage": "TYPESCRIPT",
+      "sourceCode": "function evaluate(ctx: EvaluationContext): EvaluationResult {\n  const output = ctx.observation.output || {};\n  const hasAnswer = typeof output.chat?.answer === \"string\" || typeof output.answer === \"string\";\n  const hasSolution = Boolean(output.chat?.solution || output.solution);\n  const engine = output.chat?.engine || output.engine;\n  return {\n    scores: [\n      { name: \"chat_contract_has_answer\", value: hasAnswer, dataType: \"BOOLEAN\" },\n      { name: \"chat_contract_has_solution\", value: hasSolution, dataType: \"BOOLEAN\" },\n      { name: \"chat_contract_has_engine\", value: Boolean(engine), dataType: \"BOOLEAN\" }\n    ]\n  };\n}"
+    }
+  ],
+  "rules": [
+    {
+      "name": "rosellas.solution_quality.eval_scenario",
+      "evaluator": {
+        "name": "rosellas.solution_quality",
+        "scope": "project",
+        "type": "llm_as_judge"
+      },
+      "target": "observation",
+      "enabled": false,
+      "sampling": 1,
+      "filter": [
+        {
+          "type": "string",
+          "column": "name",
+          "operator": "=",
+          "value": "eval.scenario"
+        },
+        {
+          "type": "arrayOptions",
+          "column": "tags",
+          "operator": "any of",
+          "value": ["rosellas-eval"]
+        }
+      ],
+      "mapping": [
+        {
+          "variable": "input",
+          "source": "input"
+        },
+        {
+          "variable": "output",
+          "source": "output"
+        }
+      ]
+    },
+    {
+      "name": "rosellas.chat_contract.eval_scenario",
+      "evaluator": {
+        "name": "rosellas.chat_contract",
+        "scope": "project",
+        "type": "code"
+      },
+      "target": "observation",
+      "enabled": false,
+      "sampling": 1,
+      "filter": [
+        {
+          "type": "string",
+          "column": "name",
+          "operator": "=",
+          "value": "eval.scenario"
+        },
+        {
+          "type": "arrayOptions",
+          "column": "tags",
+          "operator": "any of",
+          "value": ["rosellas-eval"]
+        }
+      ]
+    }
+  ]
+}

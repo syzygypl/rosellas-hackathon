@@ -1,0 +1,57 @@
+name: design-system
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'apps/figma-generator/**'
+      - 'design-system/**'
+      - 'tools/design-system/**'
+      - '.github/workflows/design-system.yml'
+      - 'package.json'
+      - 'package-lock.json'
+  pull_request:
+    paths:
+      - 'apps/figma-generator/**'
+      - 'design-system/**'
+      - 'tools/design-system/**'
+      - '.github/workflows/design-system.yml'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-local-plugin:
+    name: Validate and build local Figma plugin
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate tokens and kit manifest
+        run: npm run design-system:validate
+
+      - name: Build local Figma plugin
+        run: npm run design-system:figma:plugin:build
+
+      - name: Upload local Figma plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: rosellas-figma-plugin
+          path: dist/apps/figma-generator/figma-plugin/
