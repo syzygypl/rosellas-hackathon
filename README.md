@@ -24,6 +24,7 @@ Nx workspace for the hackathon apps.
 - `apps/general-ai-agent/`: NestJS API from the MVP branch.
 - `apps/landing-page/`: static Angular landing page for the research platform, served by nginx on Cloud Run.
 - `apps/customer-portal/`: Angular CSR frontend and main customer-facing app.
+- `apps/design-system-showcase/`: static Angular showcase for the repository-owned Idealab design system, deployed to Cloud Run and mapped to `desing.idealab.expert`.
 - `apps/triz-mcp-server/`: Python MCP server exposing TRIZ tools over Streamable HTTP.
 - `apps/figma-generator/`: Nx project wrapper for validating and building the local Figma design system plugin.
 - `apps/scamper-mcp-server/`: Python MCP server exposing SCAMPER ideation tools over Streamable HTTP.
@@ -82,6 +83,14 @@ npm run start:landing
 ```
 
 Open `http://localhost:4300`. The "Enter Workspace" actions point to `http://localhost:4200` locally.
+
+Run the design system showcase:
+
+```bash
+npm run start:design-system-showcase
+```
+
+Open `http://localhost:4400`.
 
 ## AI Agent
 
@@ -203,6 +212,7 @@ npm run build:mcp
 npm run build:scamper
 npm run build:landing
 npm run build:figma-generator
+npm run build:design-system-showcase
 npm run design-system:validate
 npm run design-system:figma:plugin:build
 npm run start:backend
@@ -210,6 +220,7 @@ npm run start:frontend
 npm run start:mcp
 npm run start:scamper
 npm run start:landing
+npm run start:design-system-showcase
 ```
 
 The old CRUD examples remain available through:
@@ -230,6 +241,8 @@ The Idealab mini design system is repository-driven. Tokens live in
 `design-system/tokens/rosellas.tokens.json`; the planned single-page Figma UI
 kit, text styles, components, patterns, and example screens live in
 `design-system/figma/ui-kit.json`.
+The static showcase app in `apps/design-system-showcase/` presents those
+foundations, components, patterns, and example screens for browser review.
 
 Validate the design system locally:
 
@@ -251,6 +264,12 @@ metadata and uploads the generated plugin as the `rosellas-figma-plugin`
 artifact on pull requests, pushes, and manual dispatch. More details are in
 [design-system/README.md](design-system/README.md).
 
+The `.github/workflows/design-system-showcase.yml` workflow builds and deploys
+the static showcase app to Cloud Run service `design-system-showcase`, then
+ensures the custom domain mapping for `desing.idealab.expert`. The domain must
+be verified in Google Search Console and its DNS records must point to the
+Cloud Run domain mapping output.
+
 ## GitHub Actions Configuration
 
 Create these GitHub Actions repository variables:
@@ -268,6 +287,8 @@ EMBEDDING_MODEL=text-embedding-3-small
 
 `MCP_URL` and `SCAMPER_MCP_URL` are optional for `general-ai-agent`: if they are not set, the backend workflow uses the regional `triz-mcp-server` / `scamper-mcp-server` Cloud Run URLs and appends `/mcp`. The MCP workflow uses `GCP_PROJECT_NUMBER` to allow the Cloud Run Host header in MCP transport security. Set `EMBEDDING_API_KEY` as a GitHub Actions repository secret for the `triz-mcp-server` embeddings client. Set `OPENAI_API_KEY` as a GitHub Actions secret to enable the Deep Agent chat on the deployed `general-ai-agent`; if it is absent, the workflow falls back to `EMBEDDING_API_KEY`, then legacy `OPEN_AI_API_KEY`. Without any compatible key the chat falls back to the LLM-free pipeline. `OPENAI_MODEL` and `OPENAI_REASONING_EFFORT` repository variables override the defaults. Set `LANGFUSE_SECRET_KEY` as a secret and `LANGFUSE_PUBLIC_KEY` as a repository variable to enable deployed Langfuse tracing; `LANGFUSE_BASE_URL` and `LANGFUSE_TRACING_ENVIRONMENT` are optional variables.
 
+The `design-system-showcase` workflow maps `desing.idealab.expert`. The base domain must be verified for the GitHub deployer service account before the mapping step runs, and the DNS records printed by the workflow must be added at the domain provider.
+
 The workflows use one Artifact Registry Docker repository:
 
 ```text
@@ -278,6 +299,7 @@ europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/customer-portal
 europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/triz-mcp-server
 europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/scamper-mcp-server
 europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/research-landing
+europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/design-system-showcase
 ```
 
 Run `.github/workflows/infra-bootstrap.yml` manually once before the first deploy. It enables required APIs, creates Firestore if missing, and creates the `cloud-run-apps` Artifact Registry repository.
@@ -293,11 +315,14 @@ After that:
 - changes under `apps/general-ai-agent/**` deploy only `general-ai-agent`;
 - changes under `apps/landing-page/**` deploy only `research-landing`;
 - changes under `apps/customer-portal/**` deploy only `customer-portal`;
+- changes under `apps/design-system-showcase/**` deploy only `design-system-showcase`;
 - changes under `apps/triz-mcp-server/**` deploy only `triz-mcp-server`;
 - changes under `apps/figma-generator/**`, `design-system/**`, or `tools/design-system/**` validate the design system and build the local Figma plugin artifact;
+- changes under `design-system/**` also deploy `design-system-showcase`;
 - changes under `apps/scamper-mcp-server/**` deploy only `scamper-mcp-server`;
 - frontend workflows resolve the paired backend Cloud Run URL and build Angular with `API_URL=<backend-url>/api`;
 - the landing workflow resolves the `customer-portal` Cloud Run URL and builds Angular with `workspaceUrl=<customer-portal-url>`;
+- the design system showcase workflow maps `desing.idealab.expert` to `design-system-showcase`;
 - backend workflows set version metadata and CORS for the paired frontend regional URL.
 - `general-ai-agent` also sets `MCP_URL` and `SCAMPER_MCP_URL`, using the regional `triz-mcp-server` / `scamper-mcp-server` URLs automatically when they are not configured manually.
 

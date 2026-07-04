@@ -20,6 +20,7 @@ Stan na: 2026-07-04
 | `general-ai-agent` | https://general-ai-agent-59918194944.europe-west1.run.app | https://console.cloud.google.com/run/detail/europe-west1/general-ai-agent/metrics?project=crud-hackathon-ml-20260703 | `general-ai-agent-00007-rkx` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/general-ai-agent:ab337fe7a19f140df24ee8849f466d7ae78c9898` |
 | `triz-mcp-server` | https://triz-mcp-server-59918194944.europe-west1.run.app | https://console.cloud.google.com/run/detail/europe-west1/triz-mcp-server/metrics?project=crud-hackathon-ml-20260703 | `triz-mcp-server-00003-vxr` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/triz-mcp-server:ab337fe7a19f140df24ee8849f466d7ae78c9898` |
 | `scamper-mcp-server` | https://scamper-mcp-server-59918194944.europe-west1.run.app (po pierwszym deployu) | https://console.cloud.google.com/run/detail/europe-west1/scamper-mcp-server/metrics?project=crud-hackathon-ml-20260703 | — (jeszcze nie wdrożona) | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/scamper-mcp-server` |
+| `design-system-showcase` | https://design-system-showcase-59918194944.europe-west1.run.app (po pierwszym deployu), https://desing.idealab.expert (po mapowaniu DNS) | https://console.cloud.google.com/run/detail/europe-west1/design-system-showcase/metrics?project=crud-hackathon-ml-20260703 | — (jeszcze nie wdrożona) | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/design-system-showcase` |
 
 Przydatne endpointy:
 
@@ -34,6 +35,7 @@ Przydatne endpointy:
 | AI Agent solve | https://general-ai-agent-59918194944.europe-west1.run.app/api/solve |
 | TRIZ MCP | https://triz-mcp-server-59918194944.europe-west1.run.app/mcp |
 | SCAMPER MCP | https://scamper-mcp-server-59918194944.europe-west1.run.app/mcp (po pierwszym deployu) |
+| Design system showcase | https://desing.idealab.expert |
 
 Uwaga: przykładowe usługi CRUD działają jeszcze na obrazach z repozytorium `cloud-run-source-deploy`. Nowe workflowy w tym repo budują i deployują obrazy z `cloud-run-apps`.
 
@@ -55,6 +57,7 @@ Docelowe obrazy używane przez workflowy:
 | `triz-mcp-server` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/triz-mcp-server` |
 | `scamper-mcp-server` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/scamper-mcp-server` |
 | `research-landing` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/research-landing` |
+| `design-system-showcase` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/design-system-showcase` |
 
 Zweryfikowane smoke buildy z obecnego repo:
 
@@ -147,6 +150,7 @@ Te linki nie są częścią GCP, ale są punktem wejścia do deployu tej infrast
 | `triz-mcp-server` | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/triz-mcp-server.yml |
 | `scamper-mcp-server` | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/scamper-mcp-server.yml |
 | `research-landing` | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/research-landing.yml |
+| `design-system-showcase` | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/design-system-showcase.yml |
 
 Ustawione GitHub Actions variables:
 

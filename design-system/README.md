@@ -17,6 +17,7 @@ The first version is intentionally small:
 | --- | --- |
 | `tokens/rosellas.tokens.json` | Repository-owned Figma Variables source. |
 | `figma/ui-kit.json` | Single-page Figma UI kit/component/style manifest. |
+| `../apps/design-system-showcase/` | Static Angular showcase for browser review of the design system, deployed as `design-system-showcase`. |
 | `../dist/apps/figma-generator/figma-plugin/` | Generated local Figma plugin for the free manual sync path. |
 | `../tools/design-system/` | Validation and local plugin build scripts. |
 | `../.github/workflows/design-system.yml` | GitHub Actions workflow for validation and local plugin artifacts. |
@@ -60,10 +61,13 @@ GitHub Actions also builds this plugin and uploads it as the
 ```bash
 npm run design-system:validate
 npm run design-system:figma:plugin:build
+npm run start:design-system-showcase
 ```
 
 `design-system:validate` performs offline schema checks.
 `design-system:figma:plugin:build` generates the local free plugin.
+`start:design-system-showcase` runs the static browser showcase locally.
+The deploy workflow maps the Cloud Run service to `desing.idealab.expert` after the domain is verified and DNS records are configured.
 
 Agents changing this workflow should use
 `skills/generate-figma-design-system/SKILL.md`.

@@ -1,0 +1,33 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "design-system-showcase",
+  "projectType": "application",
+  "root": "apps/design-system-showcase",
+  "sourceRoot": "apps/design-system-showcase/src",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": [
+        "{projectRoot}/dist/design-system-showcase"
+      ],
+      "options": {
+        "cwd": "apps/design-system-showcase",
+        "command": "../../node_modules/.bin/ng build --configuration production"
+      }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/design-system-showcase",
+        "command": "../../node_modules/.bin/ng serve --port 4400"
+      }
+    },
+    "watch": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/design-system-showcase",
+        "command": "../../node_modules/.bin/ng build --watch --configuration development"
+      }
+    }
+  }
+}
