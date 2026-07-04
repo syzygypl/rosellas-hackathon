@@ -131,6 +131,7 @@ Backend environment:
 
 Eval CLI environment:
 
+- The eval CLI loads the project-root `.env` file automatically before reading env vars.
 - `EVAL_BACKEND_URL`: defaults to `http://localhost:8080/api` and targets the AI agent backend `POST /api/chat`.
 - `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL`: enable SDK experiment traces, scores, and observation polling.
 - `OPENAI_API_KEY`: optional local LLM judge key. Without it, deterministic scores still run unless `--require-llm-judge` is passed.

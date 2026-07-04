@@ -31,6 +31,8 @@ The CLI prints the resolved backend URL, selected scenarios, whether Langfuse tr
 
 ## Environment
 
+The CLI loads the project-root `.env` file automatically before reading these values.
+
 - `EVAL_BACKEND_URL`: API base, default `http://localhost:8080/api`.
 - `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL`: enable experiment traces, scores, and observation polling.
 - `OPENAI_API_KEY`: enables the optional local LLM judge. Without it, deterministic scores still run and the judge is marked skipped.

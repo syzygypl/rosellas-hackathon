@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import 'dotenv/config';
 import { LangfuseClient } from '@langfuse/client';
 import { DEFAULT_BACKEND_URL, buildSessionId, normalizeApiBase, runScenarioAgainstBackend } from './backend';
 import { parseArgs, usage } from './args';
