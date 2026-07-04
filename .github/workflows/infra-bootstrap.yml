@@ -1,0 +1,70 @@
+name: Infra Bootstrap
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  ARTIFACT_REPOSITORY: cloud-run-apps
+  REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+
+jobs:
+  bootstrap:
+    name: Bootstrap GCP prerequisites
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate configuration
+        run: |
+          test -n "$PROJECT_ID"
+          test -n "${{ vars.WIF_PROVIDER }}"
+          test -n "${{ vars.GCP_SERVICE_ACCOUNT }}"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Enable Google APIs
+        run: |
+          gcloud services enable \
+            run.googleapis.com \
+            cloudbuild.googleapis.com \
+            artifactregistry.googleapis.com \
+            firestore.googleapis.com \
+            --project "$PROJECT_ID"
+
+      - name: Ensure Firestore database
+        run: |
+          gcloud firestore databases describe \
+            --database="(default)" \
+            --project "$PROJECT_ID" >/dev/null 2>&1 || \
+          gcloud firestore databases create \
+            --database="(default)" \
+            --location="$REGION" \
+            --type=firestore-native \
+            --project "$PROJECT_ID"
+
+      - name: Ensure Artifact Registry repository
+        run: |
+          gcloud artifacts repositories describe "$ARTIFACT_REPOSITORY" \
+            --location "$REGION" \
+            --project "$PROJECT_ID" >/dev/null 2>&1 || \
+          gcloud artifacts repositories create "$ARTIFACT_REPOSITORY" \
+            --repository-format=docker \
+            --location "$REGION" \
+            --description "Cloud Run application images" \
+            --project "$PROJECT_ID"

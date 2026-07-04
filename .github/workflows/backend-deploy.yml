@@ -1,0 +1,88 @@
+name: Backend Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'backend/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  ARTIFACT_REPOSITORY: cloud-run-apps
+  BACKEND_SERVICE: crud-backend
+  FRONTEND_SERVICE: crud-frontend
+  IMAGE_NAME: crud-backend
+  REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+
+jobs:
+  deploy:
+    name: Build and deploy backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate configuration
+        run: |
+          test -n "$PROJECT_ID"
+          test -n "${{ vars.WIF_PROVIDER }}"
+          test -n "${{ vars.GCP_SERVICE_ACCOUNT }}"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Build and publish backend image
+        run: |
+          IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$ARTIFACT_REPOSITORY/$IMAGE_NAME:$GITHUB_SHA"
+          gcloud builds submit backend \
+            --tag "$IMAGE" \
+            --project "$PROJECT_ID"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Resolve frontend CORS origin
+        run: |
+          ENV_VARS="^@^GOOGLE_CLOUD_PROJECT=$PROJECT_ID"
+
+          if FRONTEND_URL="$(gcloud run services describe "$FRONTEND_SERVICE" \
+              --region "$REGION" \
+              --project "$PROJECT_ID" \
+              --format='value(status.url)' 2>/dev/null)"; then
+            PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
+            REGIONAL_URL="https://$FRONTEND_SERVICE-$PROJECT_NUMBER.$REGION.run.app"
+
+            if [ "$FRONTEND_URL" = "$REGIONAL_URL" ]; then
+              CORS_ORIGIN="$FRONTEND_URL"
+            else
+              CORS_ORIGIN="$FRONTEND_URL,$REGIONAL_URL"
+            fi
+
+            ENV_VARS="$ENV_VARS@CORS_ORIGIN=$CORS_ORIGIN"
+          fi
+
+          echo "BACKEND_ENV_VARS=$ENV_VARS" >> "$GITHUB_ENV"
+
+      - name: Deploy backend to Cloud Run
+        run: |
+          gcloud run deploy "$BACKEND_SERVICE" \
+            --image "$IMAGE" \
+            --region "$REGION" \
+            --project "$PROJECT_ID" \
+            --allow-unauthenticated \
+            --set-env-vars "$BACKEND_ENV_VARS" \
+            --quiet

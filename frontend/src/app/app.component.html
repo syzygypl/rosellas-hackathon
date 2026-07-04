@@ -1,0 +1,59 @@
+<main class="shell">
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Cloud Run CRUD</p>
+      <h1>Items</h1>
+    </div>
+    <button type="button" class="secondary" (click)="loadItems()">Refresh</button>
+  </header>
+
+  @if (error()) {
+    <div class="alert">{{ error() }}</div>
+  }
+
+  <section class="panel form-panel">
+    <h2>{{ editingId ? 'Edit item' : 'Create item' }}</h2>
+    <form (ngSubmit)="submit()">
+      <label>
+        <span>Title</span>
+        <input [(ngModel)]="title" name="title" required />
+      </label>
+
+      <label>
+        <span>Description</span>
+        <textarea [(ngModel)]="description" name="description" rows="3"></textarea>
+      </label>
+
+      <div class="actions">
+        <button type="submit">{{ editingId ? 'Update' : 'Create' }}</button>
+        @if (editingId) {
+          <button type="button" class="secondary" (click)="cancelEdit()">Cancel</button>
+        }
+      </div>
+    </form>
+  </section>
+
+  <section class="panel">
+    @if (loading()) {
+      <p class="muted">Loading...</p>
+    } @else if (items().length === 0) {
+      <p class="muted">No items yet.</p>
+    } @else {
+      <ul class="item-list">
+        @for (item of items(); track item.id) {
+          <li>
+            <div class="item-copy">
+              <strong>{{ item.title }}</strong>
+              <p>{{ item.description || 'No description' }}</p>
+              <small>Updated {{ item.updatedAt | date: 'short' }}</small>
+            </div>
+            <div class="actions item-actions">
+              <button type="button" class="secondary" (click)="startEdit(item)">Edit</button>
+              <button type="button" class="danger" (click)="remove(item.id)">Delete</button>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</main>
