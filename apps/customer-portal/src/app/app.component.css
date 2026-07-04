@@ -63,6 +63,35 @@ h1 {
   border-color: #fde68a;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reset {
+  min-height: 32px;
+  padding: 0 14px;
+  color: #176b5d;
+  background: transparent;
+  border: 1px solid #176b5d;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reset:hover:not(:disabled) {
+  color: #ffffff;
+  background: #176b5d;
+}
+
+.reset:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .panel {
   background: #ffffff;
   border: 1px solid #dbe3ef;
@@ -172,6 +201,12 @@ h1 {
   40% {
     opacity: 1;
   }
+}
+
+.typing-status {
+  margin-left: 8px;
+  color: #697386;
+  font-size: 0.84rem;
 }
 
 .solution-link {
@@ -304,6 +339,15 @@ button[type='submit'] {
 
 .card.flash {
   outline: 2px solid #176b5d;
+}
+
+/* Older cards step back visually; the newest one is the current solution. */
+.solution-list .card:not(:first-of-type) {
+  opacity: 0.8;
+}
+
+.solution-list .card:not(:first-of-type):hover {
+  opacity: 1;
 }
 
 .card h2 {
@@ -521,6 +565,31 @@ button[type='submit'] {
 
 .toast-close:hover {
   opacity: 1;
+}
+
+.session-copy {
+  position: fixed;
+  right: 16px;
+  bottom: 14px;
+  z-index: 30;
+  min-height: 32px;
+  padding: 0 12px;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(21, 32, 54, 0.12);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: copy;
+}
+
+.session-copy:hover,
+.session-copy:focus-visible {
+  color: #334155;
+  background: #ffffff;
+  outline: none;
 }
 
 @media (max-width: 900px) {

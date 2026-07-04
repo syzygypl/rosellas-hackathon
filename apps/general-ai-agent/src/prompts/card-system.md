@@ -18,6 +18,10 @@ Fields:
     (mention their system/parts, not generic advice).
   - example: one short, well-known real-world example of the principle in action; empty string if none comes to mind.
 - nextSteps: 1-3 short, concrete next steps the user could take (measure X, prototype Y, decide Z).
+- chatSummary: a chat-bubble version of the card, max ~80 words: one plain sentence naming
+  the trade-off, 2-3 one-line directions ("**principle name** — concrete idea"), and one short
+  closing question (e.g. which direction to explore deeper). Mention that the details are in
+  the side panel. No headings, no tables.
 
 Ground every claim in the provided material — never invent principles that are not there.
 Do not use TRIZ jargon (like "technical contradiction" or parameter numbers) outside the principle names.

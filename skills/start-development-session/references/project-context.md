@@ -76,7 +76,13 @@ npm run build:landing
 npm run build:mcp
 ```
 
-There are currently no dedicated test scripts in either package. Use builds as the baseline verification unless the task adds tests.
+Unit tests (Jest, transpile-only ts-jest; specs live next to code as `*.spec.ts` under `apps/<app>/src/`):
+
+```bash
+npm test
+```
+
+Type-checking happens in the app builds, not in Jest. Use builds plus `npm test` as the baseline verification.
 
 ## Runtime Configuration
 
@@ -100,6 +106,7 @@ Frontend environment:
 
 - Local Angular env points to `http://localhost:8080/api`.
 - Local Angular env includes `appVersion`, `buildSha`, and `buildTime` fields used by the UI version badge.
+- The customer portal creates a per-browser-tab chat `sessionId`, displays it as muted copyable text at the bottom of the chat, and sends it with every `/api/chat` request.
 - Frontend deploy workflows resolve the paired backend Cloud Run URL and rewrite the app production environment with `<backend-url>/api` plus frontend build metadata during the CI build.
 
 Landing page environment:
@@ -125,7 +132,19 @@ Versioning details and the checklist for new apps live in `docs/versioning/READM
 
 ## API Surface
 
-Public backend base path: `/api`.
+Public backend base path: `/api` (both backends).
+
+AI agent backend (`apps/general-ai-agent`, consumed by `apps/customer-portal`):
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/health` | Health check. |
+| `GET` | `/api/version` | Application version, commit SHA, and build time. |
+| `POST` | `/api/chat` | Conversational TRIZ solver. Body: `{ messages: [{ role, content, solved? }] }` (max 40 messages, 8000 chars each). Returns `{ answer, engine, solution, suggestions?, warning? }`; `solution` carries the humanized side-panel card (`title`, `summary`, `contradiction`, `directions`, `nextSteps`) plus technical details (`parameters`, `principles`, `related`, `trail`, `report?`). |
+| `POST` | `/api/solve` | LLM-free deterministic TRIZ pipeline. Body: `{ problem }`. |
+| `POST` | `/api/agent/solve` | One-shot Deep Agent solve. Body: `{ problem }`; requires `OPENAI_API_KEY`. |
+
+Example CRUD backend (`apps/examples/backend`):
 
 | Method | Path | Purpose |
 | --- | --- | --- |
@@ -211,8 +230,8 @@ Use the narrowest useful verification:
 
 | Change type | Suggested verification |
 | --- | --- |
-| Backend TypeScript/API | `npm run build:backend` |
-| Frontend Angular/UI/API client | `npm run build:frontend` |
+| Backend TypeScript/API | `npm run build:backend` and `npm test` |
+| Frontend Angular/UI/API client | `npm run build:frontend` and `npm test` |
 | TRIZ MCP server | `npm run build:mcp`, then Docker smoke test against `/mcp` with `tools/list` and one semantic search tool. |
 | Cross-service or root config | `npm run build` |
 | Docs-only | Review rendered Markdown links and referenced paths. |

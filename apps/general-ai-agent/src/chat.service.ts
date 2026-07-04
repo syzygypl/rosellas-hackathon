@@ -1,4 +1,4 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { AgentService, AgentToolCall, SolutionDirection } from './agent.service';
 import { SolverService } from './solver.service';
 import { TrizMcpService, TrizParameter } from './triz-mcp.service';
@@ -7,11 +7,18 @@ import { LangfuseTracingService } from './langfuse-tracing.service';
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+  /** Set by the frontend on assistant turns that delivered a solution card. */
+  solved?: boolean;
 }
 
 export interface ChatRequest {
+  sessionId?: string;
   messages: ChatMessage[];
 }
+
+/** Input guards for /api/chat — everything past these goes straight to the LLM. */
+const MAX_MESSAGES = 40;
+const MAX_MESSAGE_CHARS = 8000;
 
 /** Structured payload for the side "solutions" panel in the UI. */
 export interface ChatSolution {
@@ -63,11 +70,23 @@ export class ChatService {
       'api.chat',
       {
         input: req,
-        metadata: { route: 'POST /api/chat', messageCount: req.messages?.length ?? 0 },
+        sessionId: this.cleanSessionId(req.sessionId),
+        metadata: {
+          route: 'POST /api/chat',
+          messageCount: req.messages?.length ?? 0,
+          sessionId: this.cleanSessionId(req.sessionId) ?? 'none',
+        },
         tags: ['api', 'chat'],
       },
       async () => {
-        const messages = (req.messages || []).filter((m) => m?.content?.trim());
+        const raw = (req.messages || []).filter((m) => m?.content?.trim());
+        if (raw.some((m) => m.content.length > MAX_MESSAGE_CHARS)) {
+          throw new BadRequestException(
+            `Wiadomość jest zbyt długa (limit ${MAX_MESSAGE_CHARS} znaków). Skróć opis lub podziel go na części.`,
+          );
+        }
+        // Oldest turns are context only — drop them silently past the cap.
+        const messages = raw.slice(-MAX_MESSAGES);
         const lastUser = [...messages].reverse().find((m) => m.role === 'user');
         if (!lastUser) {
           return {
@@ -98,9 +117,12 @@ export class ChatService {
   // --- Agent path -----------------------------------------------------------
 
   private async agentChat(messages: ChatMessage[], lastUserContent: string): Promise<ChatResult> {
-    // Guided intake: until the problem is understood (or 3 questions were asked),
-    // a cheap gate call either lets the solver run or returns ONE clarifying question.
-    const questionsAsked = messages.filter((m) => m.role === 'assistant').length;
+    // Guided intake: until the problem is understood (or 3 questions were asked
+    // since the last solved problem — a NEW problem later in the chat gets its
+    // own round of questions), a cheap gate call either lets the solver run or
+    // returns ONE clarifying question.
+    const lastSolved = messages.map((m) => m.role === 'assistant' && Boolean(m.solved)).lastIndexOf(true);
+    const questionsAsked = messages.slice(lastSolved + 1).filter((m) => m.role === 'assistant').length;
     if (questionsAsked < 3) {
       const intake = await this.agent.intake(messages);
       if (!intake.complete && intake.question) {
@@ -110,51 +132,72 @@ export class ChatService {
 
     const { answer, toolCalls } = await this.agent.chat(messages);
 
-    // Keep the chat conversational: a long solve report goes to the side panel
-    // in full, while the chat bubble gets a compressed summary. In parallel,
-    // rewrite the raw tool outputs into a humanized card in the conversation
+    if (!toolCalls.length) {
+      return {
+        answer,
+        engine: 'agent',
+        suggestions: await this.quickReplies(answer),
+        solution: null,
+      };
+    }
+
+    // Rewrite the raw tool outputs into a humanized card in the conversation
     // language; the dry tool-call distillation stays as fallback and as the
-    // "technical details" section.
+    // "technical details" section. For short answers the quick replies can run
+    // in parallel; for long ones the chat bubble gets the card's compressed
+    // summary first (with the dedicated summarizer as fallback).
+    const needsSummary = answer.split(/\s+/).length > 130;
+    const [card, earlySuggestions] = await Promise.all([
+      this.agent.composeSolutionCard(messages, toolCalls, answer).catch((err) => {
+        this.logger.warn(`Solution card composition failed, using raw card: ${err}`);
+        return null;
+      }),
+      needsSummary ? Promise.resolve(undefined) : this.quickReplies(answer),
+    ]);
+
     let chatAnswer = answer;
     let report: string | undefined;
-    let solution: ChatSolution | null = null;
-    if (toolCalls.length) {
-      const needsSummary = answer.split(/\s+/).length > 130;
-      const [card, summary] = await Promise.all([
-        this.agent.composeSolutionCard(messages, toolCalls, answer).catch((err) => {
-          this.logger.warn(`Solution card composition failed, using raw card: ${err}`);
+    if (needsSummary) {
+      const summary =
+        card?.chatSummary ||
+        (await this.agent.summarize(answer).catch((err) => {
+          this.logger.warn(`Report summarization failed, sending full answer: ${err}`);
           return null;
-        }),
-        needsSummary
-          ? this.agent.summarize(answer).catch((err) => {
-              this.logger.warn(`Report summarization failed, sending full answer: ${err}`);
-              return null;
-            })
-          : Promise.resolve(null),
-      ]);
+        }));
       if (summary) {
         chatAnswer = summary;
         report = answer;
       }
-      solution = { ...this.solutionFromToolCalls(lastUserContent, toolCalls), report };
-      if (card) {
-        solution.title = card.title || solution.title;
-        solution.summary = card.summary || undefined;
-        solution.contradiction = card.contradiction || solution.contradiction;
-        solution.directions = card.directions.length ? card.directions : undefined;
-        solution.nextSteps = card.nextSteps.length ? card.nextSteps : undefined;
-      }
     }
 
-    // Quick replies for the follow-up question the agent usually ends with.
-    let suggestions: string[] | undefined;
+    const solution: ChatSolution = {
+      ...this.solutionFromToolCalls(lastUserContent, toolCalls),
+      report,
+    };
+    if (card) {
+      solution.title = card.title || solution.title;
+      solution.summary = card.summary || undefined;
+      solution.contradiction = card.contradiction || solution.contradiction;
+      solution.directions = card.directions.length ? card.directions : undefined;
+      solution.nextSteps = card.nextSteps.length ? card.nextSteps : undefined;
+    }
+
+    const suggestions = needsSummary ? await this.quickReplies(chatAnswer) : earlySuggestions;
+    return { answer: chatAnswer, engine: 'agent', suggestions, solution };
+  }
+
+  /**
+   * Quick replies for the follow-up question the agent usually ends with.
+   * Skipped entirely when the message asks nothing — saves an LLM call.
+   */
+  private async quickReplies(answer: string): Promise<string[] | undefined> {
+    if (!answer.includes('?')) return undefined;
     try {
-      suggestions = await this.agent.suggestReplies(chatAnswer);
+      return await this.agent.suggestReplies(answer);
     } catch (err) {
       this.logger.warn(`Quick-reply generation failed: ${err}`);
+      return undefined;
     }
-
-    return { answer: chatAnswer, engine: 'agent', suggestions, solution };
   }
 
   /** Distill the agent's tool activity into the side-panel structure. */
@@ -182,7 +225,7 @@ export class ChatService {
             const p = parameters.find((x) => x.id === id);
             return p ? `[${id}] ${p.name}` : `[${id}]`;
           };
-          contradiction = `Improving ${imp.map(name).join(', ')} vs preserving ${pre.map(name).join(', ')}.`;
+          contradiction = `Poprawiamy ${imp.map(name).join(', ')}, nie pogarszając ${pre.map(name).join(', ')}.`;
         }
       } else if (call.output) {
         related.push(call.output);
@@ -203,6 +246,11 @@ export class ChatService {
     if (Array.isArray(value)) return value.map(Number).filter(Number.isFinite);
     if (value != null && Number.isFinite(Number(value))) return [Number(value)];
     return [];
+  }
+
+  private cleanSessionId(value: unknown): string | undefined {
+    const text = String(value ?? '').trim();
+    return text ? text.slice(0, 200) : undefined;
   }
 
   // --- LLM-free fallback path ------------------------------------------------

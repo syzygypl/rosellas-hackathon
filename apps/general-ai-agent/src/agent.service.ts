@@ -32,6 +32,8 @@ export interface SolutionCard {
   contradiction: string;
   directions: SolutionDirection[];
   nextSteps: string[];
+  /** Chat-bubble version of the card, used instead of a separate summarize call. */
+  chatSummary: string;
 }
 
 const SYSTEM_PROMPT = loadPrompt('agent-system.md');
@@ -84,8 +86,15 @@ const CARD_SCHEMA = {
       items: { type: 'string' },
       description: '1-3 short concrete next steps for the user',
     },
+    chatSummary: {
+      type: 'string',
+      description:
+        'chat-bubble version, max ~80 words: one plain sentence naming the trade-off, ' +
+        '2-3 one-line directions ("**principle** — idea"), one closing question; ' +
+        'mention that details are in the side panel',
+    },
   },
-  required: ['title', 'summary', 'contradiction', 'directions', 'nextSteps'],
+  required: ['title', 'summary', 'contradiction', 'directions', 'nextSteps', 'chatSummary'],
   additionalProperties: false,
 } as const;
 
@@ -402,6 +411,7 @@ export class AgentService {
           contradiction: String(result?.contradiction ?? '').trim(),
           directions,
           nextSteps,
+          chatSummary: String(result?.chatSummary ?? '').trim(),
         };
         this.logger.log(
           `Solution card: "${card.title}" with ${card.directions.length} direction(s), ${card.nextSteps.length} next step(s)`,

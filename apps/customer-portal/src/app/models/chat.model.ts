@@ -3,9 +3,12 @@ import { TrizParameter } from './solve.model';
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+  /** true when this assistant turn delivered a solution card — resets the intake gate. */
+  solved?: boolean;
 }
 
 export interface ChatRequest {
+  sessionId?: string;
   messages: ChatMessage[];
 }
 

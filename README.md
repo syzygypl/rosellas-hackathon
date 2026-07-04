@@ -102,6 +102,11 @@ per turn:
 All TRIZ logic runs on the MCP server. Without an OpenAI key the app still
 works — no external LLM is required.
 
+The frontend creates a per-browser-tab `sessionId`, sends it with every
+`POST /api/chat` request, and shows it as muted copyable text at the bottom of
+the chat. When Langfuse is enabled, the backend attaches that value as the
+Langfuse session id for the chat trace and nested agent/model/tool observations.
+
 Backend config (`apps/general-ai-agent/.env`):
 
 | var | default | meaning |
