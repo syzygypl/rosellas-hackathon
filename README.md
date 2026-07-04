@@ -93,7 +93,7 @@ Backend config (`apps/general-ai-agent/.env`):
 | `MCP_URL` | `http://localhost:8123/mcp` | TRIZ MCP endpoint |
 | `ANTHROPIC_API_KEY` | empty | optional, reserved for future LLM enrichment of candidates |
 | `ANTHROPIC_MODEL` | `claude-opus-4-8` | optional future enrichment model |
-| `OPENAI_API_KEY` | empty | optional, enables the Deep Agent chat (`/api/chat`, `/api/agent/solve`) |
+| `OPENAI_API_KEY` | empty | optional, enables the Deep Agent chat (`/api/chat`, `/api/agent/solve`); falls back to `EMBEDDING_API_KEY`, then legacy `OPEN_AI_API_KEY` |
 | `OPENAI_MODEL` | `gpt-5.5` | model used by the Deep Agent |
 | `OPENAI_REASONING_EFFORT` | `low` | reasoning effort for reasoning models |
 | `LANGFUSE_PUBLIC_KEY` | empty | optional with `LANGFUSE_SECRET_KEY`; enables Langfuse traces for backend AI flows |
@@ -172,7 +172,7 @@ EMBEDDING_SERVICE_URL=https://api.openai.com/v1
 EMBEDDING_MODEL=text-embedding-3-small
 ```
 
-`MCP_URL` is optional for `general-ai-agent`: if it is not set, the backend workflow uses the regional `triz-mcp-server` Cloud Run URL and appends `/mcp`. The MCP workflow uses `GCP_PROJECT_NUMBER` to allow the Cloud Run Host header in MCP transport security. Set `EMBEDDING_API_KEY` as a GitHub Actions repository secret for the `triz-mcp-server` embeddings client. Set `OPENAI_API_KEY` as a GitHub Actions secret to enable the Deep Agent chat on the deployed `general-ai-agent` (optional — without it the chat falls back to the LLM-free pipeline); `OPENAI_MODEL` and `OPENAI_REASONING_EFFORT` repository variables override the defaults. Set `LANGFUSE_SECRET_KEY` as a secret and `LANGFUSE_PUBLIC_KEY` as a repository variable to enable deployed Langfuse tracing; `LANGFUSE_BASE_URL` and `LANGFUSE_TRACING_ENVIRONMENT` are optional variables.
+`MCP_URL` is optional for `general-ai-agent`: if it is not set, the backend workflow uses the regional `triz-mcp-server` Cloud Run URL and appends `/mcp`. The MCP workflow uses `GCP_PROJECT_NUMBER` to allow the Cloud Run Host header in MCP transport security. Set `EMBEDDING_API_KEY` as a GitHub Actions repository secret for the `triz-mcp-server` embeddings client. Set `OPENAI_API_KEY` as a GitHub Actions secret to enable the Deep Agent chat on the deployed `general-ai-agent`; if it is absent, the workflow falls back to `EMBEDDING_API_KEY`, then legacy `OPEN_AI_API_KEY`. Without any compatible key the chat falls back to the LLM-free pipeline. `OPENAI_MODEL` and `OPENAI_REASONING_EFFORT` repository variables override the defaults. Set `LANGFUSE_SECRET_KEY` as a secret and `LANGFUSE_PUBLIC_KEY` as a repository variable to enable deployed Langfuse tracing; `LANGFUSE_BASE_URL` and `LANGFUSE_TRACING_ENVIRONMENT` are optional variables.
 
 The workflows use one Artifact Registry Docker repository:
 

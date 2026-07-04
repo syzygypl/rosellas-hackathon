@@ -91,6 +91,7 @@ const CARD_SCHEMA = {
 
 /** Cap each raw tool output handed to the card writer so the call stays cheap. */
 const CARD_TOOL_OUTPUT_LIMIT = 4000;
+const OPENAI_API_KEY_ENV_NAMES = ['OPENAI_API_KEY', 'EMBEDDING_API_KEY', 'OPEN_AI_API_KEY'] as const;
 
 const SUGGEST_SCHEMA = {
   type: 'object',
@@ -145,20 +146,34 @@ export class AgentService {
   private suggestModel: { invoke(input: unknown, options?: unknown): Promise<unknown> } | null = null;
   private cardModel: { invoke(input: unknown, options?: unknown): Promise<unknown> } | null = null;
   private lightModel: ChatOpenAI | null = null;
+  private readonly openAiApiKey: string;
 
-  constructor(private readonly tracing: LangfuseTracingService) {}
+  constructor(private readonly tracing: LangfuseTracingService) {
+    this.openAiApiKey = this.resolveOpenAiApiKey();
+    if (this.openAiApiKey && !process.env.OPENAI_API_KEY?.trim()) {
+      process.env.OPENAI_API_KEY = this.openAiApiKey;
+    }
+  }
 
   isConfigured(): boolean {
-    return Boolean(process.env.OPENAI_API_KEY?.trim());
+    return Boolean(this.openAiApiKey);
   }
 
   configurationError(): string {
     return [
-      'OpenAI agent is disabled because OPENAI_API_KEY is not set.',
+      `OpenAI agent is disabled because none of ${OPENAI_API_KEY_ENV_NAMES.join(', ')} is set.`,
       'Set OPENAI_API_KEY in .env or in the process environment to enable the agent.',
       `Current agent config: OPENAI_MODEL=${this.model}, OPENAI_REASONING_EFFORT=${this.reasoningEffort}, MCP_URL=${this.mcpUrl}.`,
       'The LLM-free /api/solve pipeline remains available.',
     ].join(' ');
+  }
+
+  private resolveOpenAiApiKey(): string {
+    for (const envName of OPENAI_API_KEY_ENV_NAMES) {
+      const value = process.env[envName]?.trim();
+      if (value) return value;
+    }
+    return '';
   }
 
   /** Build the MCP client + agent once, reuse across requests. */
@@ -186,6 +201,7 @@ export class AgentService {
       // reasoning.effort is ignored by non-reasoning models, so safe unconditionally.
       // GPT-5.x rejects tools + reasoning_effort on /v1/chat/completions — force Responses API.
       model: new ChatOpenAI({
+        apiKey: this.openAiApiKey,
         model: this.model,
         reasoning: { effort: this.reasoningEffort },
         useResponsesApi: true,
@@ -231,6 +247,7 @@ export class AgentService {
       async () => {
         if (!this.intakeModel) {
           this.intakeModel = new ChatOpenAI({
+            apiKey: this.openAiApiKey,
             model: this.model,
             reasoning: { effort: 'none' as any },
             useResponsesApi: true,
@@ -276,6 +293,7 @@ export class AgentService {
       async () => {
         if (!this.suggestModel) {
           this.suggestModel = new ChatOpenAI({
+            apiKey: this.openAiApiKey,
             model: this.model,
             reasoning: { effort: 'none' as any },
             useResponsesApi: true,
@@ -323,6 +341,7 @@ export class AgentService {
       async () => {
         if (!this.cardModel) {
           this.cardModel = new ChatOpenAI({
+            apiKey: this.openAiApiKey,
             model: this.model,
             reasoning: { effort: 'none' as any },
             useResponsesApi: true,
@@ -405,6 +424,7 @@ export class AgentService {
       async () => {
         if (!this.lightModel) {
           this.lightModel = new ChatOpenAI({
+            apiKey: this.openAiApiKey,
             model: this.model,
             reasoning: { effort: 'none' as any },
             useResponsesApi: true,
