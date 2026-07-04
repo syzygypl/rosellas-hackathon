@@ -66,7 +66,18 @@ Run evaluations:
 - `run_average_deterministic` is the mean `deterministic_overall` across scenarios.
 - `run_pass` is true when that average meets the configured threshold, currently `0.75`.
 
-The final table is the quickest summary: scenario id, pass/fail, deterministic score (`det`), LLM overall score (`llm`), backend engine, solution-card presence, tool-ish observation count, and scenario title. `Langfuse: flushing queued scores` means the CLI is forcing locally queued Langfuse score writes to finish before exit.
+The final table is the quickest summary:
+
+- `scenario`: scenario id from `eval/scenarios/*.json`.
+- `result`: `PASS` or `FAIL` for that scenario, based on `deterministic_overall >= passThreshold` from `eval/evaluators/deterministic.json`.
+- `det`: deterministic overall score for that scenario, from `0.000` to `1.000`.
+- `llm`: optional LLM judge overall quality score, from `0.000` to `1.000`; `-` means the LLM judge was skipped.
+- `engine`: backend path that answered. `agent` means the Deep Agent handled it; `pipeline` means the deterministic fallback handled it.
+- `solution`: whether `/api/chat` returned a structured solution card.
+- `tools`: count of tool-ish activity found from Langfuse observations or the response solution trail. Higher means more detected TRIZ/tool activity, not necessarily better quality.
+- `title`: human-readable scenario title.
+
+`Langfuse: flushing queued scores` means the CLI is forcing locally queued Langfuse score writes to finish before exit.
 
 ## Environment
 
