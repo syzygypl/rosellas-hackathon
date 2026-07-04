@@ -52,11 +52,33 @@ jobs:
       - name: Build and publish backend image
         run: |
           IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$ARTIFACT_REPOSITORY/$IMAGE_NAME:$GITHUB_SHA"
-          gcloud builds submit backend \
+          BUILD_ID="$(gcloud builds submit backend \
             --gcs-source-staging-dir "gs://$CLOUD_BUILD_SOURCE_BUCKET/source" \
-            --suppress-logs \
+            --async \
+            --format='value(id)' \
             --tag "$IMAGE" \
-            --project "$PROJECT_ID"
+            --project "$PROJECT_ID")"
+
+          echo "Cloud Build: https://console.cloud.google.com/cloud-build/builds/$BUILD_ID?project=$PROJECT_ID"
+          for _ in {1..120}; do
+            STATUS="$(gcloud builds describe "$BUILD_ID" \
+              --project "$PROJECT_ID" \
+              --format='value(status)')"
+
+            echo "Cloud Build status: $STATUS"
+            case "$STATUS" in
+              SUCCESS)
+                break
+                ;;
+              FAILURE|INTERNAL_ERROR|TIMEOUT|CANCELLED|EXPIRED)
+                exit 1
+                ;;
+            esac
+
+            sleep 5
+          done
+
+          test "$STATUS" = "SUCCESS"
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
 
       - name: Resolve frontend CORS origin
