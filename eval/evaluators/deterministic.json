@@ -1,0 +1,69 @@
+{
+  "id": "local-deterministic",
+  "type": "local_deterministic",
+  "description": "Fast, cost-free checks for the Rosellas chat contract, TRIZ activity, answer compactness, forbidden recommendations, and scenario-specific coverage.",
+  "passThreshold": 0.75,
+  "runPassThreshold": 0.75,
+  "toolTrailPattern": "search_parameter|browse_contradiction_matrix|contradiction matrix|triz matrix|triz",
+  "weights": {
+    "enginePresent": 0.15,
+    "solutionPresent": 0.15,
+    "toolTrailPresent": 0.15,
+    "answerBrief": 0.1,
+    "forbiddenAbsent": 0.2,
+    "coverage": 0.2,
+    "positiveSignalCoverage": 0.05
+  },
+  "scores": [
+    {
+      "name": "agent_engine_present",
+      "dataType": "BOOLEAN",
+      "description": "The backend response includes the engine field."
+    },
+    {
+      "name": "solution_card_present",
+      "dataType": "BOOLEAN",
+      "description": "The backend response includes a side-panel solution card."
+    },
+    {
+      "name": "triz_tool_trail_present",
+      "dataType": "BOOLEAN",
+      "description": "The response or Langfuse observations show TRIZ search or matrix activity."
+    },
+    {
+      "name": "answer_brief",
+      "dataType": "BOOLEAN",
+      "description": "The chat answer stays under the scenario word limit."
+    },
+    {
+      "name": "forbidden_solution_patterns_absent",
+      "dataType": "BOOLEAN",
+      "description": "The answer avoids scenario-specific forbidden solution patterns."
+    },
+    {
+      "name": "domain_criteria_coverage",
+      "dataType": "NUMERIC",
+      "description": "Fraction of scenario required criteria covered by keywords in the answer and solution card."
+    },
+    {
+      "name": "positive_signal_coverage",
+      "dataType": "NUMERIC",
+      "description": "Fraction of scenario positive signals covered by keywords."
+    },
+    {
+      "name": "deterministic_overall",
+      "dataType": "NUMERIC",
+      "description": "Weighted aggregate score. Passes at passThreshold."
+    },
+    {
+      "name": "run_average_deterministic",
+      "dataType": "NUMERIC",
+      "description": "Average deterministic_overall across scenarios."
+    },
+    {
+      "name": "run_pass",
+      "dataType": "BOOLEAN",
+      "description": "Run passes when run_average_deterministic is at least runPassThreshold."
+    }
+  ]
+}

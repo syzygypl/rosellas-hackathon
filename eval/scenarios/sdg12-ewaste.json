@@ -1,0 +1,52 @@
+{
+  "id": "sdg12-ewaste",
+  "title": "SDG 12: Safe electronics material recovery",
+  "prompt": "Use TRIZ to solve this contradiction: We need to improve safe recovery of valuable materials from discarded electronics, but the business constraint is that consumers still get a new phone every year. The answer must not make \"buy less\" the main solution.",
+  "maxAnswerWords": 170,
+  "requiredCriteria": [
+    {
+      "id": "safe_material_recovery",
+      "description": "Improves safe electronics material recovery.",
+      "keywords": ["safe", "material recovery", "recover", "recycling", "separation", "disassembly", "closed-loop", "toxicity"]
+    },
+    {
+      "id": "yearly_phone_constraint",
+      "description": "Respects the new-phone-every-year constraint.",
+      "keywords": ["new phone every year", "annual", "yearly", "upgrade", "leasing", "take-back", "trade-in"]
+    },
+    {
+      "id": "producer_system",
+      "description": "Uses a product or producer system rather than consumer abstinence.",
+      "keywords": ["producer", "design for disassembly", "modular", "deposit", "take-back", "reverse logistics", "refurbish"]
+    }
+  ],
+  "positiveSignals": [
+    {
+      "id": "traceable_takeback",
+      "description": "Traceable collection and take-back loops.",
+      "keywords": ["traceable", "take-back", "deposit", "reverse logistics", "serial", "passport"]
+    },
+    {
+      "id": "hazard_controls",
+      "description": "Safety controls for toxic handling.",
+      "keywords": ["hazard", "worker safety", "containment", "certified", "ventilation", "acid", "toxic"]
+    }
+  ],
+  "forbiddenPatterns": [
+    {
+      "id": "landfill_export_only",
+      "description": "Relies mainly on landfill or exporting waste.",
+      "patterns": ["landfill", "export(ing)?\\s+(the\\s+)?(e-?waste|waste)", "ship(ping)?\\s+(it\\s+)?overseas"]
+    },
+    {
+      "id": "informal_scrapping",
+      "description": "Normalizes informal unsafe scrapping.",
+      "patterns": ["informal\\s+scrap", "backyard\\s+scrap", "open\\s+burn", "burn\\s+(the\\s+)?wires"]
+    },
+    {
+      "id": "buy_less_main_answer",
+      "description": "Makes buying less the main answer despite the constraint.",
+      "patterns": ["main\\s+solution\\s+is\\s+(to\\s+)?buy\\s+less", "stop\\s+buying\\s+phones", "do\\s+not\\s+upgrade"]
+    }
+  ]
+}

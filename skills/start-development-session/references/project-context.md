@@ -13,6 +13,7 @@ Use this document to load the Rosellas Hackathon project context before changing
 - TRIZ MCP server: Python FastMCP service from `apps/triz-mcp-server/`, exposed over Streamable HTTP at `/mcp` and using an external OpenAI-compatible embeddings API.
 - Figma generator: Nx project wrapper from `apps/figma-generator/` for validating and building the local Figma design system plugin.
 - SCAMPER MCP server: Python FastMCP service from `apps/scamper-mcp-server/`, exposed over Streamable HTTP at `/mcp`; serves a static SCAMPER lens knowledge base, no embeddings API needed. The Deep Agent runs both TRIZ and SCAMPER and picks the best solution.
+- Eval CLI: root `eval/` subsystem runs local SDG scenarios against the AI agent `/api/chat` surface, records/scores Langfuse experiments when configured, and can push inactive hosted evaluator definitions.
 - Example frontend: Angular 19 standalone SPA served by nginx from `apps/examples/frontend/`.
 - Example backend: NestJS 10 CRUD API from `apps/examples/backend/`, globally prefixed with `/api`.
 - Database: Google Firestore Native, default database, `items` collection.
@@ -46,6 +47,7 @@ Use this document to load the Rosellas Hackathon project context before changing
 | Figma generator | `apps/figma-generator/` | Nx project wrapper for `design-system/` and `tools/design-system/` validation and plugin build. |
 | SCAMPER MCP app | `apps/scamper-mcp-server/` | Python FastMCP server with SCAMPER lens tools, Dockerfile, uv lockfile, and Nx build/serve targets. |
 | SCAMPER MCP data | `apps/scamper-mcp-server/app/services/scamper.py` | Static dataset of the seven SCAMPER lenses (questions, examples). |
+| Eval CLI | `eval/` | Local eval suite. `eval/scenarios/` contains scenario JSON, `eval/evaluators/` contains inspectable evaluator definitions, and `eval/framework/` contains CLI/runtime code. |
 | Cloud Run images | `apps/examples/backend/Dockerfile`, `apps/examples/frontend/Dockerfile` | Service-specific container packaging. GitHub Actions builds Nx artifacts before Docker packaging. Backend uses `apps/examples/backend/cloudbuild.yaml` with repository root context. |
 | Deploy workflows | `.github/workflows/` | Infra bootstrap plus service-specific workflows named after Cloud Run services. |
 | Design system | `design-system/`, `tools/design-system/`, `.github/workflows/design-system.yml` | Repository-owned tokens, single-page Figma UI kit manifest, local validation, and free local Figma plugin build. The local plugin uses one `Rosellas · Design System` page so it works in Figma files limited to three pages. |
@@ -75,6 +77,15 @@ npm run start:mcp
 npm run start:scamper
 ```
 
+Run local evals against the AI agent backend:
+
+```bash
+npm run eval -- list
+npm run eval -- run -s sdg12-ewaste --no-fail
+npm run eval -- run -s sdg12-ewaste,sdg6-wastewater
+npm run eval:push -- --dry-run
+```
+
 Build:
 
 ```bash
@@ -89,7 +100,7 @@ npm run design-system:validate
 npm run design-system:figma:plugin:build
 ```
 
-Unit tests (Jest, transpile-only ts-jest; specs live next to code as `*.spec.ts` under `apps/<app>/src/`):
+Unit tests (Jest, transpile-only ts-jest; specs live next to code as `*.spec.ts` under `apps/<app>/src/` and `eval/framework/`):
 
 ```bash
 npm test
@@ -117,6 +128,14 @@ Backend environment:
 - `LANGFUSE_BASE_URL`: defaults to `https://cloud.langfuse.com`.
 - `LANGFUSE_TRACING_ENVIRONMENT`: optional Langfuse environment label; use `local` locally and a deployed label such as `production` in Cloud Run.
 - `LANGCHAIN_CALLBACKS_BACKGROUND`: defaults to `false` in the env template so LangChain callbacks finish predictably in Cloud Run-style runtimes.
+
+Eval CLI environment:
+
+- `EVAL_BACKEND_URL`: defaults to `http://localhost:8080/api` and targets the AI agent backend `POST /api/chat`.
+- `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL`: enable SDK experiment traces, scores, and observation polling.
+- `OPENAI_API_KEY`: optional local LLM judge key. Without it, deterministic scores still run unless `--require-llm-judge` is passed.
+- `EVAL_LLM_JUDGE_MODEL`: optional local judge model override. Falls back to `LANGFUSE_EVAL_MODEL`, then `gpt-4.1-mini`.
+- `LANGFUSE_EVAL_PROVIDER` / `LANGFUSE_EVAL_MODEL`: optional hosted LLM-as-judge model config used by `npm run eval:push`.
 
 Frontend environment:
 
@@ -258,6 +277,7 @@ Use the narrowest useful verification:
 | Change type | Suggested verification |
 | --- | --- |
 | Backend TypeScript/API | `npm run build:backend` and `npm test` |
+| Eval CLI | `npm test`, `npm run eval -- list`, and `npm run eval:push -- --dry-run`; use `npm run eval -- run ... --no-fail` when a backend is running. |
 | Frontend Angular/UI/API client | `npm run build:frontend` and `npm test` |
 | TRIZ MCP server | `npm run build:mcp`, then Docker smoke test against `/mcp` with `tools/list` and one semantic search tool. |
 | SCAMPER MCP server | `npm run build:scamper`, then smoke test against `/mcp` with `tools/list` and one lens tool. |

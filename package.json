@@ -25,6 +25,8 @@
     "start:mcp": "NX_DAEMON=false NX_WORKSPACE_DATA_DIRECTORY=\"$PWD/.nx/workspace-data\" NX_CACHE_DIRECTORY=\"$PWD/.nx/cache\" nx run triz-mcp-server:serve",
     "start:scamper": "NX_DAEMON=false NX_WORKSPACE_DATA_DIRECTORY=\"$PWD/.nx/workspace-data\" NX_CACHE_DIRECTORY=\"$PWD/.nx/cache\" nx run scamper-mcp-server:serve",
     "start:landing": "NX_DAEMON=false NX_WORKSPACE_DATA_DIRECTORY=\"$PWD/.nx/workspace-data\" NX_CACHE_DIRECTORY=\"$PWD/.nx/cache\" nx run landing-page:serve",
+    "eval": "tsx eval/framework/cli.ts",
+    "eval:push": "tsx eval/framework/cli.ts push",
     "test": "jest",
     "graph": "NX_DAEMON=false NX_WORKSPACE_DATA_DIRECTORY=\"$PWD/.nx/workspace-data\" NX_CACHE_DIRECTORY=\"$PWD/.nx/cache\" nx graph"
   },
@@ -32,6 +34,7 @@
     "@langchain/core": "^1.2.1",
     "@langchain/mcp-adapters": "^1.1.3",
     "@langchain/openai": "^1.5.3",
+    "@langfuse/client": "^5.9.1",
     "@langfuse/core": "^5.9.1",
     "@langfuse/langchain": "^5.9.1",
     "@langfuse/otel": "^5.9.1",
@@ -70,6 +73,7 @@
     "nx": "^23.0.1",
     "ts-jest": "^29.4.11",
     "tslib": "^2.8.1",
+    "tsx": "^4.23.0",
     "typescript": "~5.6.3",
     "zone.js": "~0.15.0"
   },
