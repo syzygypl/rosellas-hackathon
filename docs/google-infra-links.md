@@ -126,6 +126,7 @@ Te linki nie są częścią GCP, ale są punktem wejścia do deployu tej infrast
 Ustawione GitHub Actions variables:
 
 - `GCP_PROJECT_ID=crud-hackathon-ml-20260703`
+- `GCP_PROJECT_NUMBER=59918194944`
 - `GCP_REGION=europe-west1`
 - `WIF_PROVIDER=projects/59918194944/locations/global/workloadIdentityPools/github/providers/github`
 - `GCP_SERVICE_ACCOUNT=github-deployer@crud-hackathon-ml-20260703.iam.gserviceaccount.com`

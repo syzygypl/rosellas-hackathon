@@ -19,6 +19,7 @@ env:
   CLOUD_BUILD_SOURCE_BUCKET: ${{ vars.CLOUD_BUILD_SOURCE_BUCKET || 'crud-hackathon-ml-20260703-github-cloud-build-source' }}
   FRONTEND_SERVICE: crud-frontend
   IMAGE_NAME: crud-backend
+  PROJECT_NUMBER: ${{ vars.GCP_PROJECT_NUMBER || '59918194944' }}
   REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
 
@@ -90,7 +91,6 @@ jobs:
               --region "$REGION" \
               --project "$PROJECT_ID" \
               --format='value(status.url)' 2>/dev/null)"; then
-            PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
             REGIONAL_URL="https://$FRONTEND_SERVICE-$PROJECT_NUMBER.$REGION.run.app"
 
             if [ "$FRONTEND_URL" = "$REGIONAL_URL" ]; then
