@@ -1,0 +1,4 @@
+interface:
+  display_name: "Add New Application"
+  short_description: "Add Nx apps with repo conventions"
+  default_prompt: "Use $add-new-application to add a new application to the Rosellas Nx monorepo."

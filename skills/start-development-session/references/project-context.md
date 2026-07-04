@@ -35,6 +35,8 @@ Use this document to load the Rosellas Hackathon project context before changing
 | Cloud Run images | `apps/examples/backend/Dockerfile`, `apps/examples/frontend/Dockerfile` | Service-specific container packaging. GitHub Actions builds Nx artifacts before Docker packaging. Backend uses `apps/examples/backend/cloudbuild.yaml` with repository root context. |
 | Deploy workflows | `.github/workflows/` | Infra bootstrap, backend deploy, frontend deploy. |
 | Infra links | `docs/google-infra-links.md` | Current resource URLs and GCP identifiers. |
+| Versioning docs | `docs/versioning/README.md` | Shared app version, build metadata, Swagger, UI badge, and workflow conventions. |
+| New app skill | `skills/add-new-application/SKILL.md` | Procedure for adding Nx applications under repo conventions. |
 
 ## Local Commands
 
@@ -70,11 +72,17 @@ Backend environment:
 - `PORT`: defaults to `8080`.
 - `GOOGLE_CLOUD_PROJECT` or `GCLOUD_PROJECT`: project ID for Firebase Admin / Firestore.
 - `CORS_ORIGIN`: comma-separated allowed origins. Defaults locally to `http://localhost:4200` and `http://localhost:5000`.
+- `APP_VERSION`: displayed in Swagger and returned by `/api/version`; CI sets this from root `package.json`.
+- `GIT_SHA`: commit SHA returned by `/api/version`; CI sets this from `GITHUB_SHA`.
+- `BUILD_TIME`: UTC ISO timestamp returned by `/api/version`; CI sets this during deploy.
 
 Frontend environment:
 
 - Local Angular env points to `http://localhost:8080/api`.
-- `frontend-deploy.yml` resolves the current backend Cloud Run URL and rewrites `apps/examples/frontend/src/environments/environment.prod.ts` with `<backend-url>/api` during the CI build.
+- Local Angular env includes `appVersion`, `buildSha`, and `buildTime` fields used by the UI version badge.
+- `frontend-deploy.yml` resolves the current backend Cloud Run URL and rewrites `apps/examples/frontend/src/environments/environment.prod.ts` with `<backend-url>/api` plus frontend build metadata during the CI build.
+
+Versioning details and the checklist for new apps live in `docs/versioning/README.md`.
 
 ## API Surface
 
@@ -83,6 +91,7 @@ Public backend base path: `/api`.
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/health` | Health check. |
+| `GET` | `/api/version` | Application version, commit SHA, and build time. |
 | `GET` | `/api/docs` | Swagger UI. |
 | `GET` | `/api/items` | List items ordered by `updatedAt` descending. |
 | `GET` | `/api/items/:id` | Fetch one item. |
@@ -121,6 +130,7 @@ Do not assume deployed URLs are current from memory. Use `docs/google-infra-link
 
 - Keep backend changes aligned with Swagger DTOs and validation.
 - Keep frontend API calls centralized in `apps/examples/frontend/src/app/services/items.service.ts`.
+- When adding an app, use `skills/add-new-application/SKILL.md` and apply `docs/versioning/README.md`.
 - Avoid committing `node_modules/`, `dist/`, `.angular/`, `.env`, `.env.*`, or local GCP credentials.
 - Treat `apps/examples/frontend/src/environments/environment.prod.ts` as CI-rewritten for production deploys.
 - Prefer narrow changes that match the existing small-demo architecture: Cloud Run, Firestore, GitHub Actions, no Kubernetes, no Terraform.

@@ -4,7 +4,21 @@
       <p class="eyebrow">Cloud Run CRUD</p>
       <h1>Items</h1>
     </div>
-    <button type="button" class="secondary" (click)="loadItems()">Refresh</button>
+    <div class="topbar-actions">
+      <div class="version-stack" aria-label="Application versions">
+        <span title="Frontend build time: {{ frontendBuildTime }}">
+          Frontend v{{ frontendVersion }} · {{ shortSha(frontendBuildSha) }}
+        </span>
+        @if (backendVersion(); as backend) {
+          <span title="Backend build time: {{ backend.buildTime }}">
+            Backend v{{ backend.version }} · {{ shortSha(backend.commitSha) }}
+          </span>
+        } @else {
+          <span>Backend unavailable</span>
+        }
+      </div>
+      <button type="button" class="secondary" (click)="loadItems()">Refresh</button>
+    </div>
   </header>
 
   @if (error()) {

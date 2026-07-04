@@ -1,8 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { environment } from '../environments/environment';
 import { Item } from './models/item.model';
+import { AppVersion } from './models/version.model';
 import { ItemsService } from './services/items.service';
+import { VersionService } from './services/version.service';
 
 @Component({
   selector: 'app-root',
@@ -13,17 +16,34 @@ import { ItemsService } from './services/items.service';
 })
 export class AppComponent implements OnInit {
   private readonly itemsService = inject(ItemsService);
+  private readonly versionService = inject(VersionService);
 
   items = signal<Item[]>([]);
+  backendVersion = signal<AppVersion | null>(null);
   loading = signal(false);
   error = signal<string | null>(null);
+  frontendVersion = environment.appVersion;
+  frontendBuildSha = environment.buildSha;
+  frontendBuildTime = environment.buildTime;
 
   title = '';
   description = '';
   editingId: string | null = null;
 
   ngOnInit(): void {
+    this.loadVersion();
     this.loadItems();
+  }
+
+  loadVersion(): void {
+    this.versionService.get().subscribe({
+      next: (version) => this.backendVersion.set(version),
+      error: () => this.backendVersion.set(null),
+    });
+  }
+
+  shortSha(value: string): string {
+    return value === 'local' ? value : value.slice(0, 7);
   }
 
   loadItems(): void {

@@ -3,6 +3,10 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
+function appVersion(): string {
+  return process.env.APP_VERSION ?? 'local';
+}
+
 function corsOrigins(): string[] {
   const configured = process.env.CORS_ORIGIN?.split(',')
     .map((value) => value.trim())
@@ -32,9 +36,12 @@ async function bootstrap() {
   );
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('CRUD API')
-    .setDescription('Items CRUD API backed by Firestore')
-    .setVersion('1.0')
+    .setTitle('Rosellas Example Backend API')
+    .setDescription('Example Items CRUD API backed by Firestore')
+    .setVersion(appVersion())
+    .addTag('health', 'Runtime health checks')
+    .addTag('version', 'Application version metadata')
+    .addTag('items', 'Firestore-backed CRUD operations')
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);

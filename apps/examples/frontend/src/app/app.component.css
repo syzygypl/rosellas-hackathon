@@ -21,6 +21,26 @@
   margin-bottom: 20px;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.version-stack {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  color: #475569;
+  font-size: 0.8rem;
+  line-height: 1.25;
+  text-align: right;
+}
+
+.version-stack span {
+  overflow-wrap: anywhere;
+}
+
 .eyebrow {
   margin: 0 0 4px;
   color: #64748b;
@@ -187,6 +207,15 @@ button.danger:hover {
   .topbar {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .topbar-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .version-stack {
+    text-align: left;
   }
 
   .item-list li {
