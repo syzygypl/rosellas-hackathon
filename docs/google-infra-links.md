@@ -44,6 +44,7 @@ Docelowe obrazy używane przez workflowy:
 | `crud-frontend` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/crud-frontend` |
 | `general-ai-agent` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/general-ai-agent` |
 | `customer-portal` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/customer-portal` |
+| `triz-mcp-server` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/triz-mcp-server` |
 
 Zweryfikowane smoke buildy z obecnego repo:
 
@@ -126,6 +127,7 @@ Te linki nie są częścią GCP, ale są punktem wejścia do deployu tej infrast
 | `crud-frontend` | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/crud-frontend.yml |
 | `general-ai-agent` | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/general-ai-agent.yml |
 | `customer-portal` | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/customer-portal.yml |
+| `triz-mcp-server` | https://github.com/syzygypl/rosellas-hackathon/actions/workflows/triz-mcp-server.yml |
 
 Ustawione GitHub Actions variables:
 
@@ -134,3 +136,8 @@ Ustawione GitHub Actions variables:
 - `GCP_REGION=europe-west1`
 - `WIF_PROVIDER=projects/59918194944/locations/global/workloadIdentityPools/github/providers/github`
 - `GCP_SERVICE_ACCOUNT=github-deployer@crud-hackathon-ml-20260703.iam.gserviceaccount.com`
+
+Do ustawienia dla workflowu `triz-mcp-server`:
+
+- `EMBEDDING_SERVICE_URL=<external-ollama-openai-compatible-v1-url>`
+- `EMBEDDING_MODEL=embeddinggemma:300m`

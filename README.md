@@ -4,6 +4,7 @@ Nx workspace for the hackathon apps.
 
 - `apps/general-ai-agent/`: NestJS API from the MVP branch.
 - `apps/customer-portal/`: Angular CSR frontend and main customer-facing app.
+- `apps/triz-mcp-server/`: Python MCP server exposing TRIZ tools over Streamable HTTP.
 - `apps/examples/backend/`: previous example NestJS API under `/api`, backed by Firestore.
 - `apps/examples/frontend/`: previous example Angular SPA served by nginx on Cloud Run.
 - root workspace: Nx monorepo with one root `package.json` and `package-lock.json`.
@@ -12,7 +13,7 @@ Nx workspace for the hackathon apps.
 
 ## Prereqs
 
-The TRIZ MCP server must be running and reachable at `MCP_URL` (default `http://localhost:8123/mcp`), with its embedding service up.
+The TRIZ MCP server must be running and reachable at `MCP_URL` (default `http://localhost:8123/mcp`). It uses an external Ollama/OpenAI-compatible embeddings API through `EMBEDDING_SERVICE_URL`; Ollama is not hosted inside this monorepo.
 
 Install dependencies from the repository root:
 
@@ -25,6 +26,14 @@ Run the backend:
 ```bash
 cp apps/general-ai-agent/.env.example apps/general-ai-agent/.env
 npm run start:backend
+```
+
+Run the MCP server:
+
+```bash
+cp apps/triz-mcp-server/.env.example apps/triz-mcp-server/.env
+# edit apps/triz-mcp-server/.env and set EMBEDDING_SERVICE_URL
+npm run start:mcp
 ```
 
 Run the main frontend:
@@ -72,6 +81,11 @@ apps/general-ai-agent/
 apps/customer-portal/
   src/app/                  Angular CSR solver UI
   src/environments/         API URL configuration
+
+apps/triz-mcp-server/
+  app/main.py               FastMCP Streamable HTTP server
+  app/tools/                registered TRIZ MCP tools
+  app/services/triz.py      pytriz store and external embedding client
 ```
 
 ## Nx Commands
@@ -81,8 +95,10 @@ npm run build
 npm run build:ai-agent
 npm run build:backend
 npm run build:frontend
+npm run build:mcp
 npm run start:backend
 npm run start:frontend
+npm run start:mcp
 ```
 
 The old CRUD examples remain available through:
@@ -107,7 +123,11 @@ GCP_REGION=europe-west1
 WIF_PROVIDER=projects/<project-number>/locations/global/workloadIdentityPools/github/providers/github
 GCP_SERVICE_ACCOUNT=github-deployer@<project-id>.iam.gserviceaccount.com
 MCP_URL=<deployed-or-private-triz-mcp-url>
+EMBEDDING_SERVICE_URL=<external-ollama-openai-compatible-v1-url>
+EMBEDDING_MODEL=embeddinggemma:300m
 ```
+
+`MCP_URL` is optional for `general-ai-agent`: if it is not set, the backend workflow resolves the `triz-mcp-server` Cloud Run URL and appends `/mcp`. `EMBEDDING_SERVICE_URL` is required by the `triz-mcp-server` workflow. Set `EMBEDDING_API_KEY` as a GitHub Actions secret when the external Ollama endpoint needs a token; otherwise the workflow falls back to `ollama`.
 
 The workflows use one Artifact Registry Docker repository:
 
@@ -116,6 +136,7 @@ europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/crud-backend
 europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/crud-frontend
 europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/general-ai-agent
 europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/customer-portal
+europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/triz-mcp-server
 ```
 
 Run `.github/workflows/infra-bootstrap.yml` manually once before the first deploy. It enables required APIs, creates Firestore if missing, and creates the `cloud-run-apps` Artifact Registry repository.
@@ -130,9 +151,10 @@ After that:
 - changes under `apps/examples/frontend/**` deploy only `crud-frontend`;
 - changes under `apps/general-ai-agent/**` deploy only `general-ai-agent`;
 - changes under `apps/customer-portal/**` deploy only `customer-portal`;
+- changes under `apps/triz-mcp-server/**` deploy only `triz-mcp-server`;
 - frontend workflows resolve the paired backend Cloud Run URL and build Angular with `API_URL=<backend-url>/api`;
 - backend workflows set version metadata and CORS for the paired frontend regional URL.
-- `general-ai-agent` also sets `MCP_URL`.
+- `general-ai-agent` also sets `MCP_URL`, resolving `triz-mcp-server` automatically when `MCP_URL` is not configured manually.
 
 ## One-Time GCP IAM
 
