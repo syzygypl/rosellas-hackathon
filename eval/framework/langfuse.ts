@@ -96,12 +96,23 @@ export async function pollLangfuseObservations(
   const to = new Date(Math.max(Date.now(), endedAt.getTime()) + 120_000).toISOString();
   let lastError: string | undefined;
 
-  for (let attempt = 0; attempt < 4; attempt += 1) {
+  let bestRows: any[] = [];
+  let stableReads = 0;
+
+  for (let attempt = 0; attempt < 6; attempt += 1) {
     if (attempt > 0) await delay(1000 * attempt);
     try {
       const observations = await fetchObservationRows(sessionId, from, to);
-      if (observations.length || attempt === 3) {
-        return summarizeObservations(observations);
+      if (observations.length > bestRows.length) {
+        bestRows = observations;
+        stableReads = 0;
+      } else if (observations.length === bestRows.length && observations.length > 0) {
+        stableReads += 1;
+      }
+
+      const summary = summarizeObservations(bestRows);
+      if (summary.toolTrail.length || stableReads >= 2 || attempt === 5) {
+        return summary;
       }
     } catch (err) {
       lastError = err instanceof Error ? err.message : String(err);
@@ -160,8 +171,23 @@ function summarizeObservations(rows: any[]): ObservationSummary {
 }
 
 function isToolish(row: any): boolean {
-  const haystack = `${row.name || ''} ${row.type || ''} ${JSON.stringify(row.metadata || {})}`.toLowerCase();
-  return /tool|triz|matrix|search_parameter|browse_contradiction/.test(haystack);
+  const name = String(row.name || '').toLowerCase();
+  const type = String(row.type || '').toLowerCase();
+  if (type === 'tool') return true;
+
+  const metadata = row.metadata || {};
+  const metadataText = [
+    metadata.tool,
+    metadata.langgraph_node,
+    ...(Array.isArray(metadata.tags) ? metadata.tags : []),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return /tool|triz|scamper|matrix|search_parameter|browse_contradiction/.test(
+    `${name} ${metadataText}`,
+  );
 }
 
 function sum(values: number[]): number {
