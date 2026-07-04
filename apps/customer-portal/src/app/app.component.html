@@ -68,15 +68,6 @@
         ></textarea>
         <button type="submit" [disabled]="loading() || !input.trim()">Wyślij</button>
       </form>
-      <button
-        type="button"
-        class="session-id"
-        title="Copy session id"
-        aria-label="Copy session id"
-        (click)="copySessionId()"
-      >
-        session {{ sessionId }}
-      </button>
     </main>
 
     <aside class="solutions panel">
@@ -190,3 +181,13 @@
     </div>
   }
 </div>
+
+<button
+  type="button"
+  class="session-copy"
+  title="Copy session id"
+  aria-label="Copy session id"
+  (click)="copySessionId()"
+>
+  Session
+</button>
