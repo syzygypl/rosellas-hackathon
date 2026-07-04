@@ -1,6 +1,3 @@
-html,
-body {
-  min-height: 100%;
-  margin: 0;
-  background: #f5f7fb;
-}
+/* App-specific global styles only.
+   Design tokens, base reset and primitives come from libs/design-system
+   (wired in angular.json "styles"). */

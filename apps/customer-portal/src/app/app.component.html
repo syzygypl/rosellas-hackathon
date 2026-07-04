@@ -1,20 +1,23 @@
 <div class="shell">
   <header class="topbar">
-    <div>
-      <p class="eyebrow">TRIZ AI agent</p>
-      <h1>Inventive Problem Solver</h1>
+    <div class="topbar-brand">
+      <img src="assets/idealab-mark.svg" alt="" aria-hidden="true" />
+      <div>
+        <p class="label eyebrow">Idealab &middot; TRIZ AI agent</p>
+        <h1>Inventive Problem Solver</h1>
+      </div>
     </div>
     <div class="topbar-actions">
       <button
         type="button"
-        class="reset"
+        class="btn"
         (click)="resetChat()"
         [disabled]="loading()"
         title="Wyczyść rozmowę i panel rozwiązań"
       >
-        ✨ Nowy problem
+        Nowy problem
       </button>
-      <span class="status" [class.status-busy]="loading()">
+      <span class="label status" [class.status-busy]="loading()">
         {{ loading() ? 'Myślę…' : 'Gotowy' }}
       </span>
     </div>
@@ -27,19 +30,19 @@
           <div class="msg" [class.user]="bubble.cls === 'user'" [class.bot]="bubble.cls === 'bot'">
             <span [innerHTML]="bubble.html"></span>
             @if (bubble.solutionId) {
-              <button type="button" class="solution-link" (click)="scrollToSolution(bubble.solutionId!)">
+              <button type="button" class="pill solution-link" (click)="scrollToSolution(bubble.solutionId!)">
                 → zobacz rozwiązanie #{{ bubble.solutionId }} w panelu
               </button>
             }
             @if (bubble.retry && $last && !loading()) {
-              <button type="button" class="solution-link" (click)="retry()">
+              <button type="button" class="pill solution-link" (click)="retry()">
                 ↻ Spróbuj ponownie
               </button>
             }
             @if ($last && !loading() && bubble.suggestions?.length) {
               <div class="suggestions">
                 @for (suggestion of bubble.suggestions; track $index) {
-                  <button type="button" class="chip" (click)="sendSuggestion(suggestion)">
+                  <button type="button" class="pill chip" (click)="sendSuggestion(suggestion)">
                     {{ suggestion }}
                   </button>
                 }
@@ -66,13 +69,13 @@
           placeholder="Opisz problem lub dopytaj…"
           [disabled]="loading()"
         ></textarea>
-        <button type="submit" [disabled]="loading() || !input.trim()">Wyślij</button>
+        <button type="submit" class="btn btn-lg" [disabled]="loading() || !input.trim()">Wyślij</button>
       </form>
     </main>
 
     <aside class="solutions panel">
-      <div class="panel-head">
-        💡 Rozwiązania <span class="count">{{ solutions().length }}</span>
+      <div class="label panel-head">
+        Rozwiązania <span class="count">{{ solutions().length }}</span>
       </div>
       <div class="solution-list">
         @if (!solutions().length) {
@@ -87,9 +90,9 @@
             <h2>
               #{{ card.id }} {{ card.sol.title }}
               @if (card.sol.method) {
-                <span class="badge method">{{ card.sol.method }}</span>
+                <span class="label badge method">{{ card.sol.method }}</span>
               }
-              <span class="badge">{{ engineLabel(card.engine) }}</span>
+              <span class="label badge">{{ engineLabel(card.engine) }}</span>
             </h2>
 
             @if (card.sol.summary) {
@@ -97,16 +100,16 @@
             }
 
             @if (card.sol.contradiction) {
-              <blockquote class="contradiction">⚖️ {{ card.sol.contradiction }}</blockquote>
+              <blockquote class="contradiction">{{ card.sol.contradiction }}</blockquote>
             }
 
             @if (card.sol.bestDirection; as best) {
               <div class="best-direction">
-                <span class="best-label">🏆 Najlepsze rozwiązanie</span>
+                <span class="label best-label">Najlepsze rozwiązanie</span>
                 <h3>{{ best.principle }}</h3>
                 <p>{{ best.idea }}</p>
                 @if (best.example) {
-                  <p class="example">💬 {{ best.example }}</p>
+                  <p class="example">{{ best.example }}</p>
                 }
                 @if (card.sol.whyBest) {
                   <p class="why-best">{{ card.sol.whyBest }}</p>
@@ -116,20 +119,20 @@
                 }
               </div>
             } @else if (card.sol.methodRationale) {
-              <p class="method-rationale">🏆 {{ card.sol.methodRationale }}</p>
+              <p class="method-rationale">{{ card.sol.methodRationale }}</p>
             }
 
             @if (card.sol.directions?.length) {
               @if (card.sol.bestDirection) {
                 <details class="alternatives">
-                  <summary>🧭 Pozostałe kierunki ({{ card.sol.directions!.length }})</summary>
+                  <summary>Pozostałe kierunki ({{ card.sol.directions!.length }})</summary>
                   <div class="directions">
                     @for (direction of card.sol.directions; track $index) {
                       <div class="direction">
                         <h3>{{ direction.principle }}</h3>
                         <p>{{ direction.idea }}</p>
                         @if (direction.example) {
-                          <p class="example">💬 {{ direction.example }}</p>
+                          <p class="example">{{ direction.example }}</p>
                         }
                       </div>
                     }
@@ -142,7 +145,7 @@
                       <h3>{{ direction.principle }}</h3>
                       <p>{{ direction.idea }}</p>
                       @if (direction.example) {
-                        <p class="example">💬 {{ direction.example }}</p>
+                        <p class="example">{{ direction.example }}</p>
                       }
                     </div>
                   }
@@ -152,7 +155,7 @@
 
             @if (card.sol.nextSteps?.length) {
               <div class="next-steps">
-                <span class="next-steps-label">Co dalej?</span>
+                <span class="label next-steps-label">Co dalej?</span>
                 <ul>
                   @for (step of card.sol.nextSteps; track $index) {
                     <li>{{ step }}</li>
@@ -163,16 +166,16 @@
 
             @if (card.reportHtml) {
               <details [open]="!card.sol.bestDirection && !card.sol.directions?.length">
-                <summary>📝 Pełny raport</summary>
+                <summary>Pełny raport</summary>
                 <div class="report" [innerHTML]="card.reportHtml"></div>
               </details>
             }
 
             <details class="tech" [open]="!card.sol.bestDirection && !card.sol.directions?.length">
-              <summary>🔬 Szczegóły techniczne (TRIZ / SCAMPER)</summary>
+              <summary>Szczegóły techniczne (TRIZ / SCAMPER)</summary>
 
               <details [open]="!card.reportHtml">
-                <summary>🔎 Parametry TRIZ ({{ card.sol.parameters.length }})</summary>
+                <summary>Parametry TRIZ ({{ card.sol.parameters.length }})</summary>
                 @for (parameter of card.sol.parameters; track parameter.id) {
                   <div class="param">
                     <span class="pid">[{{ parameter.id }}]</span>
@@ -185,17 +188,17 @@
               </details>
 
               <details [open]="!card.reportHtml">
-                <summary>💡 Zasady wynalazcze z macierzy</summary>
+                <summary>Zasady wynalazcze z macierzy</summary>
                 <pre>{{ card.sol.principles || '—' }}</pre>
               </details>
 
               <details>
-                <summary>🧭 Powiązane zasady / kierunki SCAMPER</summary>
+                <summary>Powiązane zasady / kierunki SCAMPER</summary>
                 <pre>{{ card.sol.related || '—' }}</pre>
               </details>
 
               <details>
-                <summary>🧾 Ślad rozumowania</summary>
+                <summary>Ślad rozumowania</summary>
                 <ol class="trail">
                   @for (step of card.sol.trail; track $index) {
                     <li>{{ step }}</li>
@@ -224,7 +227,7 @@
 
 <button
   type="button"
-  class="session-copy"
+  class="label session-copy"
   title="Copy session id"
   aria-label="Copy session id"
   (click)="copySessionId()"

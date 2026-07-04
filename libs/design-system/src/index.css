@@ -1,0 +1,5 @@
+/* Idealab Design System · single entry point for consuming apps. */
+
+@import "./tokens.css";
+@import "./base.css";
+@import "./primitives.css";

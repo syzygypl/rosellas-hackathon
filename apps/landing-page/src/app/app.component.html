@@ -5,19 +5,19 @@
       <span>Idealab</span>
     </a>
 
-    <div class="platform-label">
+    <div class="label platform-label">
       <span>Research Platform</span>
       <span aria-hidden="true">.</span>
       <span>{{ versionLabel }}</span>
     </div>
 
-    <a class="nav-action" [href]="workspaceUrl">Enter Workspace</a>
+    <a class="btn nav-action" [href]="workspaceUrl">Enter Workspace</a>
   </div>
 </header>
 
 <main class="page-shell">
   <section class="hero" aria-labelledby="landing-title">
-    <p class="status-pill">
+    <p class="label status-pill">
       <span aria-hidden="true"></span>
       AI Laboratory &middot; Active
     </p>
@@ -48,7 +48,7 @@
   <section class="tracks" aria-labelledby="tracks-title">
     <div class="section-title">
       <span aria-hidden="true"></span>
-      <h2 id="tracks-title">Environmental Tracks</h2>
+      <h2 id="tracks-title" class="label">Environmental Tracks</h2>
       <span aria-hidden="true"></span>
     </div>
 
@@ -58,7 +58,7 @@
           <div class="track-heading">
             <img [src]="track.iconSrc" alt="" aria-hidden="true">
             <div>
-              <p>{{ track.label }}</p>
+              <p class="label">{{ track.label }}</p>
               <h3>{{ track.title }}</h3>
             </div>
           </div>
@@ -76,7 +76,7 @@
   </section>
 
   <section class="workspace-entry" aria-label="Workspace access">
-    <a class="primary-action" [href]="workspaceUrl">
+    <a class="btn primary-action" [href]="workspaceUrl">
       <span aria-hidden="true">&rarr;</span>
       Enter Workspace
     </a>

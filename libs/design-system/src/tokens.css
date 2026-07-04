@@ -1,0 +1,117 @@
+/* ----------------------------------------------------------------
+   Idealab Design System · Design tokens
+   Single source of truth for the visual language of every app.
+   Categories: color, typography, spacing, radius, shadow, focus.
+   ---------------------------------------------------------------- */
+
+:root {
+  /* Color · neutrals */
+  --color-bg: #f8f7f4;
+  --color-bg-veil: rgba(248, 247, 244, 0.94);
+  --color-surface: #ffffff;
+  --color-surface-dim: #faf9f7;
+  --color-surface-veil: rgba(255, 255, 255, 0.88);
+  --color-ink: #1f1f1d;
+  --color-ink-soft: #575450;
+  --color-body: #5f5b56;
+  --color-muted: #9a9690;
+  --color-faint: #aaa69f;
+  --color-border: #e1ddd7;
+
+  /* Color · tags & code */
+  --color-tag-bg: #efede9;
+  --color-tag-border: #ded9d2;
+  --color-tag-ink: #55504a;
+  --color-code-bg: #f5f3f0;
+  --color-code-inline-bg: #e4e0da;
+
+  /* Color · primary action */
+  --color-primary: #222220;
+  --color-primary-hover: #383835;
+  --color-on-primary: #ffffff;
+
+  /* Color · accent */
+  --color-accent: #27c3a2;
+  --color-accent-ink: #14735e;
+  --color-accent-soft: #e6f7f1;
+  --color-accent-faint: #f6faf8;
+  --color-accent-border: #c4ebde;
+
+  /* Color · status */
+  --color-warning: #c98f2b;
+  --color-warning-bg: #faf4e8;
+  --color-warning-ink: #6e5220;
+  --color-error: #c2402e;
+  --color-busy: #d9a406;
+
+  /* Typography · families */
+  --font-sans:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  --font-serif: Georgia, "Times New Roman", serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+
+  /* Typography · scale */
+  --text-2xs: 0.66rem;
+  --text-xs: 0.72rem;
+  --text-sm: 0.8rem;
+  --text-md: 0.85rem;
+  --text-base: 0.9rem;
+  --text-lg: 1rem;
+  --text-xl: 1.08rem;
+  --text-2xl: clamp(1.4rem, 4vw, 1.9rem);
+
+  /* Typography · display (marketing/hero sizes) */
+  --text-display-3: 1.35rem;
+  --text-display-2: 3.6rem;
+  --text-display-1: 4rem;
+
+  /* Typography · weight & rhythm */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-heavy: 800;
+  --leading-tight: 1.25;
+  --leading-normal: 1.55;
+  --leading-relaxed: 1.65;
+  --tracking-wide: 0.04em;
+
+  /* Spacing (2px-base scale) */
+  --space-2: 2px;
+  --space-4: 4px;
+  --space-6: 6px;
+  --space-8: 8px;
+  --space-10: 10px;
+  --space-12: 12px;
+  --space-14: 14px;
+  --space-16: 16px;
+  --space-18: 18px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-28: 28px;
+  --space-32: 32px;
+  --space-36: 36px;
+  --space-40: 40px;
+  --space-48: 48px;
+  --space-56: 56px;
+  --space-64: 64px;
+  --space-96: 96px;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 999px;
+
+  /* Shadows (elevation) */
+  --shadow-sm: 0 10px 22px rgba(31, 31, 29, 0.06);
+  --shadow-md: 0 12px 28px rgba(31, 31, 29, 0.06);
+  --shadow-lg: 0 16px 32px rgba(31, 31, 29, 0.14);
+  --shadow-primary: 0 10px 18px rgba(31, 31, 29, 0.18);
+
+  /* Focus */
+  --focus-ring: 2px solid var(--color-accent);
+}

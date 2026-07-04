@@ -1,12 +1,6 @@
-html {
-  min-height: 100%;
-  background: #f8f7f4;
-}
-
-body {
-  min-height: 100%;
-  margin: 0;
-}
+/* App-specific global styles only.
+   Design tokens, base reset and primitives come from libs/design-system
+   (wired in angular.json "styles"). */
 
 * {
   box-sizing: border-box;

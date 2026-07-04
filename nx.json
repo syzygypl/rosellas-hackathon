@@ -25,7 +25,8 @@
         "^build"
       ],
       "inputs": [
-        "production"
+        "production",
+        "^production"
       ]
     }
   },

@@ -4,6 +4,7 @@
   "projectType": "application",
   "root": "apps/customer-portal",
   "sourceRoot": "apps/customer-portal/src",
+  "implicitDependencies": ["design-system"],
   "targets": {
     "build": {
       "executor": "nx:run-commands",
