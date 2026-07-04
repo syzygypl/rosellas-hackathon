@@ -17,6 +17,8 @@ Stan na: 2026-07-04
 | --- | --- | --- | --- | --- |
 | `crud-backend` | https://crud-backend-sjd2cgjmta-ew.a.run.app | https://console.cloud.google.com/run/detail/europe-west1/crud-backend/metrics?project=crud-hackathon-ml-20260703 | `crud-backend-00005-dpd` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-source-deploy/crud-backend@sha256:5899938eabac79752c6e6b97cd1cdeb06fba51f87d6e9280904695e58b1e8cd9` |
 | `crud-frontend` | https://crud-frontend-sjd2cgjmta-ew.a.run.app | https://console.cloud.google.com/run/detail/europe-west1/crud-frontend/metrics?project=crud-hackathon-ml-20260703 | `crud-frontend-00002-cp7` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-source-deploy/crud-frontend@sha256:bc4325205fe0d257e690d59b864d12f5457770ccdd932dde1d75b3bcb6671d7c` |
+| `general-ai-agent` | https://general-ai-agent-59918194944.europe-west1.run.app | https://console.cloud.google.com/run/detail/europe-west1/general-ai-agent/metrics?project=crud-hackathon-ml-20260703 | `general-ai-agent-00007-rkx` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/general-ai-agent:ab337fe7a19f140df24ee8849f466d7ae78c9898` |
+| `triz-mcp-server` | https://triz-mcp-server-59918194944.europe-west1.run.app | https://console.cloud.google.com/run/detail/europe-west1/triz-mcp-server/metrics?project=crud-hackathon-ml-20260703 | `triz-mcp-server-00003-vxr` | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/triz-mcp-server:ab337fe7a19f140df24ee8849f466d7ae78c9898` |
 
 Przydatne endpointy:
 
@@ -26,8 +28,12 @@ Przydatne endpointy:
 | Backend health | https://crud-backend-sjd2cgjmta-ew.a.run.app/api/health |
 | Backend Swagger | https://crud-backend-sjd2cgjmta-ew.a.run.app/api/docs |
 | Backend API base | https://crud-backend-sjd2cgjmta-ew.a.run.app/api |
+| AI Agent API base | https://general-ai-agent-59918194944.europe-west1.run.app/api |
+| AI Agent health | https://general-ai-agent-59918194944.europe-west1.run.app/api/health |
+| AI Agent solve | https://general-ai-agent-59918194944.europe-west1.run.app/api/solve |
+| TRIZ MCP | https://triz-mcp-server-59918194944.europe-west1.run.app/mcp |
 
-Uwaga: obecne usługi Cloud Run działają jeszcze na obrazach z repozytorium `cloud-run-source-deploy`. Nowe workflowy w tym repo budują i deployują obrazy z `cloud-run-apps`.
+Uwaga: przykładowe usługi CRUD działają jeszcze na obrazach z repozytorium `cloud-run-source-deploy`. Nowe workflowy w tym repo budują i deployują obrazy z `cloud-run-apps`.
 
 ## Artifact Registry
 
