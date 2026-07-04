@@ -2,8 +2,8 @@ node_modules
 **/node_modules
 dist
 **/dist
-!apps/ai-agent/dist
-!apps/ai-agent/dist/**
+!apps/general-ai-agent/dist
+!apps/general-ai-agent/dist/**
 !apps/examples/backend/dist
 !apps/examples/backend/dist/**
 .angular

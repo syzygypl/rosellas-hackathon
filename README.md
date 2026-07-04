@@ -2,9 +2,10 @@
 
 Nx workspace for the hackathon apps.
 
-- `apps/ai-agent/`: NestJS backend from the MVP branch. It serves the TRIZ solver API and a small built-in UI.
-- `apps/examples/frontend/`: Angular SPA served by nginx on Cloud Run.
+- `apps/general-ai-agent/`: NestJS API from the MVP branch.
+- `apps/customer-portal/`: Angular CSR frontend and main customer-facing app.
 - `apps/examples/backend/`: previous example NestJS API under `/api`, backed by Firestore.
+- `apps/examples/frontend/`: previous example Angular SPA served by nginx on Cloud Run.
 - root workspace: Nx monorepo with one root `package.json` and `package-lock.json`.
 - `.github/workflows/`: GitHub Actions workflows for infra bootstrap, backend deploy, and frontend deploy.
 - `skills/`: AI agent startup skills for Codex, Cursor, and Claude.
@@ -19,24 +20,24 @@ Install dependencies from the repository root:
 npm install
 ```
 
-Run the AI agent backend:
+Run the backend:
 
 ```bash
-cp apps/ai-agent/.env.example apps/ai-agent/.env
+cp apps/general-ai-agent/.env.example apps/general-ai-agent/.env
 npm run start:backend
 ```
 
-Open `http://localhost:3000`, enter a free-text problem, and the backend returns detected TRIZ parameters, a technical contradiction, principles from the contradiction matrix, related principles, and a reasoning trail.
-
-Run the example frontend:
+Run the main frontend:
 
 ```bash
 npm run start:frontend
 ```
 
-## AI Agent Backend
+Open `http://localhost:4200`. The Angular frontend calls the backend at `http://localhost:8080/api` by default.
 
-The `ai-agent` Nx project implements the core Event Storming flow from the Miro board:
+## AI Agent
+
+The split app implements the core Event Storming flow from the Miro board:
 
 `Problem Submitted -> Technical Contradiction Built -> TRIZ Parameters Mapped -> Matrix Lookup -> Principles Found -> Candidate directions -> Run Completed`.
 
@@ -48,11 +49,12 @@ How it works:
 
 All TRIZ logic runs on the MCP server. No external LLM is required.
 
-Config (`apps/ai-agent/.env`):
+Backend config (`apps/general-ai-agent/.env`):
 
 | var | default | meaning |
 |-----|---------|---------|
-| `PORT` | `3000` | backend port |
+| `PORT` | `8080` | backend port |
+| `CORS_ORIGIN` | `http://localhost:4200` | allowed frontend origin |
 | `MCP_URL` | `http://localhost:8123/mcp` | TRIZ MCP endpoint |
 | `ANTHROPIC_API_KEY` | empty | optional, reserved for future LLM enrichment of candidates |
 | `ANTHROPIC_MODEL` | `claude-opus-4-8` | optional future enrichment model |
@@ -60,13 +62,16 @@ Config (`apps/ai-agent/.env`):
 Layout:
 
 ```text
-apps/ai-agent/src/
-  main.ts               bootstrap + CORS + .env
-  app.module.ts
-  triz-mcp.service.ts   JSON-RPC client for the TRIZ MCP server
-  solver.service.ts     pipeline orchestration
-  solver.controller.ts  GET /, GET /health, POST /api/solve
-apps/ai-agent/public/index.html
+apps/general-ai-agent/
+  src/main.ts               bootstrap + CORS + /api prefix
+  src/app.module.ts
+  src/triz-mcp.service.ts   JSON-RPC client for the TRIZ MCP server
+  src/solver.service.ts     pipeline orchestration
+  src/solver.controller.ts  GET /api/health, POST /api/solve
+
+apps/customer-portal/
+  src/app/                  Angular CSR solver UI
+  src/environments/         API URL configuration
 ```
 
 ## Nx Commands
@@ -76,6 +81,17 @@ npm run build
 npm run build:ai-agent
 npm run build:backend
 npm run build:frontend
+npm run start:backend
+npm run start:frontend
+```
+
+The old CRUD examples remain available through:
+
+```bash
+npm run build:example-backend
+npm run build:example-frontend
+npm run start:example-backend
+npm run start:example-frontend
 ```
 
 ## GitHub Actions Configuration
@@ -93,8 +109,8 @@ MCP_URL=<deployed-or-private-triz-mcp-url>
 The workflows use one Artifact Registry Docker repository:
 
 ```text
-europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/ai-agent
-europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/crud-frontend
+europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/general-ai-agent
+europe-west1-docker.pkg.dev/<project-id>/cloud-run-apps/customer-portal
 ```
 
 Run `.github/workflows/infra-bootstrap.yml` manually once before the first deploy. It enables required APIs, creates Firestore if missing, and creates the `cloud-run-apps` Artifact Registry repository.
@@ -105,10 +121,10 @@ AI agent startup skills are centralized in [skills/](skills/), with entry points
 
 After that:
 
-- changes under `apps/ai-agent/**` deploy only `ai-agent`;
-- changes under `apps/examples/frontend/**` deploy only `crud-frontend`;
+- changes under `apps/general-ai-agent/**` deploy only `general-ai-agent`;
+- changes under `apps/customer-portal/**` deploy only `customer-portal`;
 - frontend deploy resolves the current backend Cloud Run URL and builds Angular with `API_URL=<backend-url>/api`;
-- backend deploy sets `MCP_URL` when the repository variable exists.
+- backend deploy sets `MCP_URL` and, when the frontend service exists, `CORS_ORIGIN`.
 
 ## One-Time GCP IAM
 

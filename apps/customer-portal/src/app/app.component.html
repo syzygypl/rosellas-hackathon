@@ -1,0 +1,100 @@
+<main class="shell">
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">TRIZ AI agent</p>
+      <h1>Inventive Problem Solver</h1>
+    </div>
+    <span class="status" [class.status-busy]="loading()">
+      {{ loading() ? 'Running' : 'Ready' }}
+    </span>
+  </header>
+
+  @if (error()) {
+    <div class="alert">{{ error() }}</div>
+  }
+
+  <section class="panel form-panel">
+    <form (ngSubmit)="solve()">
+      <label for="problem">Problem</label>
+      <textarea
+        id="problem"
+        name="problem"
+        rows="5"
+        [(ngModel)]="problem"
+        placeholder="A delivery drone must fly longer between charges without becoming heavier."
+      ></textarea>
+
+      <div class="actions">
+        <button type="submit" [disabled]="loading() || !problem.trim()">
+          {{ loading() ? 'Solving...' : 'Solve' }}
+        </button>
+        <button type="button" class="secondary" (click)="reset()" [disabled]="loading()">
+          Reset
+        </button>
+      </div>
+    </form>
+  </section>
+
+  @if (result(); as solved) {
+    <section class="summary-grid">
+      <article class="panel">
+        <h2>Technical contradiction</h2>
+        <p>{{ solved.contradiction }}</p>
+      </article>
+
+      <article class="panel">
+        <h2>Selected pair</h2>
+        <dl class="pair-list">
+          <div>
+            <dt>Improving</dt>
+            <dd>{{ parameterName(solved.improvingParameter) }}</dd>
+          </div>
+          <div>
+            <dt>Worsening</dt>
+            <dd>{{ parameterName(solved.worseningParameter) }}</dd>
+          </div>
+        </dl>
+      </article>
+    </section>
+
+    <section class="panel">
+      <h2>Detected TRIZ parameters</h2>
+      @if (solved.detectedParameters.length) {
+        <ul class="parameter-list">
+          @for (parameter of solved.detectedParameters; track parameter.id) {
+            <li>
+              <span class="parameter-id">[{{ parameter.id }}]</span>
+              <div>
+                <strong>{{ parameter.name }}</strong>
+                <p>{{ parameter.description }}</p>
+              </div>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="muted">No parameters detected.</p>
+      }
+    </section>
+
+    <section class="result-grid">
+      <article class="panel">
+        <h2>Matrix principles</h2>
+        <pre>{{ solved.principlesFromMatrix }}</pre>
+      </article>
+
+      <article class="panel">
+        <h2>Related principles</h2>
+        <pre>{{ solved.relatedPrinciples }}</pre>
+      </article>
+    </section>
+
+    <section class="panel">
+      <h2>Reasoning trail</h2>
+      <ol class="trail">
+        @for (step of solved.trail; track step) {
+          <li>{{ step }}</li>
+        }
+      </ol>
+    </section>
+  }
+</main>

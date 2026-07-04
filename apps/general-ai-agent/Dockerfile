@@ -8,8 +8,7 @@ ENV PORT=8080
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-COPY apps/ai-agent/dist ./dist
-COPY apps/ai-agent/public ./public
+COPY apps/general-ai-agent/dist ./dist
 
 EXPOSE 8080
 

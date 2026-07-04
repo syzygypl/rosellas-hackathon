@@ -3,7 +3,7 @@ steps:
     args:
       - build
       - --file
-      - apps/ai-agent/Dockerfile
+      - apps/general-ai-agent/Dockerfile
       - --tag
       - ${_IMAGE}
       - .

@@ -6,7 +6,7 @@ on:
       - main
       - master
     paths:
-      - 'apps/ai-agent/**'
+      - 'apps/general-ai-agent/**'
       - 'package.json'
       - 'package-lock.json'
       - 'nx.json'
@@ -18,9 +18,11 @@ permissions:
 
 env:
   ARTIFACT_REPOSITORY: cloud-run-apps
-  BACKEND_SERVICE: ai-agent
+  BACKEND_SERVICE: general-ai-agent
   CLOUD_BUILD_SOURCE_BUCKET: ${{ vars.CLOUD_BUILD_SOURCE_BUCKET || 'crud-hackathon-ml-20260703-github-cloud-build-source' }}
-  IMAGE_NAME: ai-agent
+  FRONTEND_SERVICE: customer-portal
+  IMAGE_NAME: general-ai-agent
+  PROJECT_NUMBER: ${{ vars.GCP_PROJECT_NUMBER || '59918194944' }}
   REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
 
@@ -67,7 +69,7 @@ jobs:
         run: |
           IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$ARTIFACT_REPOSITORY/$IMAGE_NAME:$GITHUB_SHA"
           BUILD_ID="$(gcloud builds submit . \
-            --config apps/ai-agent/cloudbuild.yaml \
+            --config apps/general-ai-agent/cloudbuild.yaml \
             --gcs-source-staging-dir "gs://$CLOUD_BUILD_SOURCE_BUCKET/source" \
             --gcs-log-dir "gs://$CLOUD_BUILD_SOURCE_BUCKET/logs" \
             --substitutions "_IMAGE=$IMAGE" \
@@ -99,7 +101,24 @@ jobs:
 
       - name: Resolve backend environment
         run: |
-          echo "BACKEND_ENV_VARS=MCP_URL=${{ vars.MCP_URL }}" >> "$GITHUB_ENV"
+          ENV_VARS="^@^MCP_URL=${{ vars.MCP_URL }}"
+
+          if FRONTEND_URL="$(gcloud run services describe "$FRONTEND_SERVICE" \
+              --region "$REGION" \
+              --project "$PROJECT_ID" \
+              --format='value(status.url)' 2>/dev/null)"; then
+            REGIONAL_URL="https://$FRONTEND_SERVICE-$PROJECT_NUMBER.$REGION.run.app"
+
+            if [ "$FRONTEND_URL" = "$REGIONAL_URL" ]; then
+              CORS_ORIGIN="$FRONTEND_URL"
+            else
+              CORS_ORIGIN="$FRONTEND_URL,$REGIONAL_URL"
+            fi
+
+            ENV_VARS="$ENV_VARS@CORS_ORIGIN=$CORS_ORIGIN"
+          fi
+
+          echo "BACKEND_ENV_VARS=$ENV_VARS" >> "$GITHUB_ENV"
 
       - name: Deploy backend to Cloud Run
         run: |

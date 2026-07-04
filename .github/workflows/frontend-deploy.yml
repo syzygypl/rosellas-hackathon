@@ -6,7 +6,7 @@ on:
       - main
       - master
     paths:
-      - 'apps/examples/frontend/**'
+      - 'apps/customer-portal/**'
       - 'package.json'
       - 'package-lock.json'
       - 'nx.json'
@@ -18,10 +18,10 @@ permissions:
 
 env:
   ARTIFACT_REPOSITORY: cloud-run-apps
-  BACKEND_SERVICE: crud-backend
+  BACKEND_SERVICE: general-ai-agent
   CLOUD_BUILD_SOURCE_BUCKET: ${{ vars.CLOUD_BUILD_SOURCE_BUCKET || 'crud-hackathon-ml-20260703-github-cloud-build-source' }}
-  FRONTEND_SERVICE: crud-frontend
-  IMAGE_NAME: crud-frontend
+  FRONTEND_SERVICE: customer-portal
+  IMAGE_NAME: customer-portal
   REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
 
@@ -69,14 +69,14 @@ jobs:
 
       - name: Build Angular frontend
         run: |
-          printf "export const environment = {\n  production: true,\n  apiUrl: '%s',\n};\n" "$API_URL" > apps/examples/frontend/src/environments/environment.prod.ts
+          printf "export const environment = {\n  production: true,\n  apiUrl: '%s',\n};\n" "$API_URL" > apps/customer-portal/src/environments/environment.prod.ts
           npm ci
           npm run build:frontend
 
       - name: Build and publish frontend image
         run: |
           IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$ARTIFACT_REPOSITORY/$IMAGE_NAME:$GITHUB_SHA"
-          BUILD_ID="$(gcloud builds submit apps/examples/frontend \
+          BUILD_ID="$(gcloud builds submit apps/customer-portal \
             --gcs-source-staging-dir "gs://$CLOUD_BUILD_SOURCE_BUCKET/source" \
             --gcs-log-dir "gs://$CLOUD_BUILD_SOURCE_BUCKET/logs" \
             --async \

@@ -40,8 +40,8 @@ Docelowe obrazy używane przez workflowy:
 
 | Aplikacja | Obraz |
 | --- | --- |
-| Backend | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/crud-backend` |
-| Frontend | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/crud-frontend` |
+| Backend | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/general-ai-agent` |
+| Frontend | `europe-west1-docker.pkg.dev/crud-hackathon-ml-20260703/cloud-run-apps/customer-portal` |
 
 Zweryfikowane smoke buildy z obecnego repo:
 
@@ -60,7 +60,7 @@ Zweryfikowane smoke buildy z obecnego repo:
 | Console | https://console.cloud.google.com/firestore/databases?project=crud-hackathon-ml-20260703 |
 | Data viewer | https://console.cloud.google.com/firestore/data?project=crud-hackathon-ml-20260703 |
 
-Backend używa kolekcji `items`.
+Obecna usługa `crud-backend` używa kolekcji `items`. Nowy backend `general-ai-agent` komunikuje się z TRIZ MCP i nie używa Firestore w bieżącym MVP.
 
 ## Cloud Build
 
