@@ -12,13 +12,18 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChatMessage, ChatSolution } from './models/chat.model';
 import { ChatApiService } from './services/chat-api.service';
+import { escapeHtml, renderMarkdownHtml } from './markdown.util';
 
 interface Bubble {
   cls: 'user' | 'bot';
+  /** Source text (markdown for bot, plain for user) — kept for persistence. */
+  raw: string;
   html: SafeHtml;
   solutionId?: number;
   /** Quick-reply options shown as buttons while this is the latest bubble. */
   suggestions?: string[];
+  /** Marks the error notice that offers retrying the failed request. */
+  retry?: boolean;
 }
 
 interface SolutionCard {
@@ -36,9 +41,36 @@ interface Toast {
   body: string;
 }
 
+/** Serializable snapshot of the conversation kept in sessionStorage. */
+interface PersistedState {
+  history: ChatMessage[];
+  bubbles: Omit<Bubble, 'html'>[];
+  solutions: { id: number; engine: 'agent' | 'pipeline'; sol: ChatSolution }[];
+  nextId: number;
+}
+
+const STORAGE_KEY = 'triz-chat-state';
+
 const GREETING =
   'Cześć! 👋 Opowiedz w 1–2 zdaniach, nad jakim problemem technicznym pracujesz. ' +
-  'Dopytam o szczegóły, a gotowe rozwiązania TRIZ pojawią się w panelu obok.';
+  'Dopytam o szczegóły, a gotowe rozwiązania TRIZ pojawią się w panelu obok. ' +
+  'Możesz też kliknąć jeden z przykładów poniżej.';
+
+/** Clickable example problems attached to the greeting. */
+const EXAMPLE_PROBLEMS = [
+  'Projektuję dron dostawczy: większy udźwig wymaga cięższych akumulatorów, które skracają czas lotu.',
+  'Przyspieszenie cięcia laserem pogarsza jakość krawędzi detalu.',
+  'Odchudzona obudowa urządzenia robi się zbyt wiotka i podatna na drgania.',
+];
+
+/** Rotating status lines shown next to the typing dots on long agent turns. */
+const PROGRESS_STATUSES = [
+  'Analizuję problem…',
+  'Przeszukuję parametry i macierz sprzeczności TRIZ…',
+  'Dobieram zasady wynalazcze…',
+  'Piszę kartę rozwiązań…',
+];
+const PROGRESS_STEP_MS = 7000;
 
 @Component({
   selector: 'app-root',
@@ -52,17 +84,27 @@ export class AppComponent implements AfterViewChecked {
   private readonly sanitizer = inject(DomSanitizer);
 
   @ViewChild('messagesBox') private messagesBox?: ElementRef<HTMLElement>;
+  @ViewChild('composerInput') private composerInput?: ElementRef<HTMLTextAreaElement>;
 
   input = '';
-  bubbles = signal<Bubble[]>([{ cls: 'bot', html: GREETING }]);
+  bubbles = signal<Bubble[]>([]);
   solutions = signal<SolutionCard[]>([]);
   toasts = signal<Toast[]>([]);
   loading = signal(false);
+  loadingStatus = signal('');
 
   /** Full conversation history, sent to the backend on every turn. */
-  private readonly history: ChatMessage[] = [];
+  private history: ChatMessage[] = [];
   private nextId = 0;
+  private nextToastId = 0;
   private shouldScroll = false;
+  private statusTimer: ReturnType<typeof setInterval> | null = null;
+
+  constructor() {
+    if (!this.restore()) {
+      this.bubbles.set([this.greetingBubble()]);
+    }
+  }
 
   ngAfterViewChecked(): void {
     if (this.shouldScroll && this.messagesBox) {
@@ -88,6 +130,35 @@ export class AppComponent implements AfterViewChecked {
     this.sendText(text);
   }
 
+  /** Re-send the request for the trailing user message after a failure. */
+  retry(): void {
+    if (this.loading()) {
+      return;
+    }
+    this.dispatch();
+  }
+
+  resetChat(): void {
+    if (this.loading()) {
+      return;
+    }
+    this.history = [];
+    this.nextId = 0;
+    this.input = '';
+    this.solutions.set([]);
+    this.bubbles.set([this.greetingBubble()]);
+    sessionStorage.removeItem(STORAGE_KEY);
+    this.focusComposer();
+  }
+
+  autoGrow(): void {
+    const el = this.composerInput?.nativeElement;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`; // CSS max-height caps it
+    }
+  }
+
   private sendText(raw: string): void {
     const text = raw.trim();
     if (!text || this.loading()) {
@@ -95,14 +166,26 @@ export class AppComponent implements AfterViewChecked {
     }
 
     this.input = '';
+    if (this.composerInput) {
+      this.composerInput.nativeElement.style.height = 'auto';
+    }
     this.history.push({ role: 'user', content: text });
-    this.addBubble({ cls: 'user', html: this.escape(text) });
+    this.addBubble({ cls: 'user', raw: text, html: this.escape(text) });
+    this.dispatch();
+  }
+
+  private dispatch(): void {
     this.loading.set(true);
+    this.startProgress();
 
     this.chatApi.chat({ messages: [...this.history] }).subscribe({
       next: (result) => {
-        this.loading.set(false);
-        this.history.push({ role: 'assistant', content: result.answer || '' });
+        this.finishRequest();
+        this.history.push({
+          role: 'assistant',
+          content: result.answer || '',
+          solved: Boolean(result.solution),
+        });
 
         let solutionId: number | undefined;
         if (result.solution) {
@@ -111,24 +194,55 @@ export class AppComponent implements AfterViewChecked {
         if (result.warning) {
           this.showToast('warning', 'Konfiguracja OpenAI', result.warning);
         }
+        const answer = result.answer || '(pusta odpowiedź)';
         this.addBubble({
           cls: 'bot',
-          html: this.markdown(result.answer || '(pusta odpowiedź)'),
+          raw: answer,
+          html: this.markdown(answer),
           solutionId,
           suggestions: result.suggestions?.filter((s) => s.trim()),
         });
       },
       error: (err: HttpErrorResponse) => {
-        this.loading.set(false);
+        this.finishRequest();
         const detail =
           typeof err.error === 'object' && err.error?.message
             ? String(err.error.message)
             : err.message;
         this.showToast('error', 'Błąd żądania', detail);
-        // keep the user message in history so a retry has full context
+        // The user message stays in history, so the retry has full context.
+        const notice = 'Nie udało się uzyskać odpowiedzi.';
+        this.addBubble({ cls: 'bot', raw: notice, html: notice, retry: true });
       },
     });
     this.shouldScroll = true;
+  }
+
+  private finishRequest(): void {
+    this.loading.set(false);
+    if (this.statusTimer) {
+      clearInterval(this.statusTimer);
+      this.statusTimer = null;
+    }
+    this.loadingStatus.set('');
+    this.focusComposer();
+  }
+
+  private startProgress(): void {
+    let step = 0;
+    this.loadingStatus.set(PROGRESS_STATUSES[0]);
+    this.statusTimer = setInterval(() => {
+      step = Math.min(step + 1, PROGRESS_STATUSES.length - 1);
+      this.loadingStatus.set(PROGRESS_STATUSES[step]);
+    }, PROGRESS_STEP_MS);
+  }
+
+  private focusComposer(): void {
+    setTimeout(() => this.composerInput?.nativeElement.focus());
+  }
+
+  private greetingBubble(): Bubble {
+    return { cls: 'bot', raw: GREETING, html: GREETING, suggestions: [...EXAMPLE_PROBLEMS] };
   }
 
   scrollToSolution(id: number): void {
@@ -157,6 +271,7 @@ export class AppComponent implements AfterViewChecked {
   private addBubble(bubble: Bubble): void {
     this.bubbles.update((bubbles) => [...bubbles, bubble]);
     this.shouldScroll = true;
+    this.persist();
   }
 
   private addSolution(sol: ChatSolution, engine: 'agent' | 'pipeline'): number {
@@ -179,33 +294,64 @@ export class AppComponent implements AfterViewChecked {
     return id;
   }
 
+  private persist(): void {
+    try {
+      const state: PersistedState = {
+        history: this.history,
+        bubbles: this.bubbles().map(({ html, ...rest }) => rest),
+        solutions: this.solutions().map(({ id, engine, sol }) => ({ id, engine, sol })),
+        nextId: this.nextId,
+      };
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch {
+      // Persistence is best-effort; a full or blocked storage must not break the chat.
+    }
+  }
+
+  private restore(): boolean {
+    try {
+      const json = sessionStorage.getItem(STORAGE_KEY);
+      if (!json) {
+        return false;
+      }
+      const state = JSON.parse(json) as PersistedState;
+      if (!Array.isArray(state?.history) || !Array.isArray(state?.bubbles) || !state.bubbles.length) {
+        return false;
+      }
+      this.history = state.history;
+      this.nextId = state.nextId || 0;
+      this.bubbles.set(
+        state.bubbles.map((b) => ({
+          ...b,
+          html: b.cls === 'user' ? this.escape(b.raw) : this.markdown(b.raw),
+        })),
+      );
+      this.solutions.set(
+        (state.solutions ?? []).map((c) => ({
+          ...c,
+          reportHtml: c.sol.report ? this.markdown(c.sol.report) : null,
+          flash: false,
+        })),
+      );
+      this.shouldScroll = true;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private showToast(kind: Toast['kind'], title: string, body: string): void {
-    const id = ++this.nextId;
+    const id = ++this.nextToastId;
     this.toasts.update((toasts) => [...toasts, { id, kind, title, body }]);
     setTimeout(() => this.dismissToast(id), kind === 'error' ? 14000 : 10000);
   }
 
   private escape(value: string): string {
-    return (value ?? '').replace(
-      /[&<>]/g,
-      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!,
-    );
+    return escapeHtml(value);
   }
 
-  /** Minimal markdown for bot answers: headers, bold, code, bullet lists. */
   private markdown(value: string): SafeHtml {
-    let html = this.escape(value);
-    html = html
-      .replace(/^#{1,3} (.*)$/gm, '<h4>$1</h4>')
-      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-      .replace(/^\s*(?:[-•*]|\d+\.) (.*)$/gm, '<li>$1</li>');
-    html = html.replace(
-      /(?:<li>.*?<\/li>\n?)+/gs,
-      (m) => '<ul>' + m.replace(/\n/g, '') + '</ul>',
-    );
-    html = html.replace(/\n{2,}/g, '<br><br>').replace(/\n/g, '<br>');
-    // Safe: the source is escaped above, only tags produced here remain.
-    return this.sanitizer.bypassSecurityTrustHtml(html);
+    // Safe: renderMarkdownHtml escapes the source before adding its own tags.
+    return this.sanitizer.bypassSecurityTrustHtml(renderMarkdownHtml(value));
   }
 }

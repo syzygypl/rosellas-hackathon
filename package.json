@@ -20,6 +20,7 @@
     "start:frontend": "nx run customer-portal:serve",
     "start:mcp": "nx run triz-mcp-server:serve",
     "start:landing": "nx run landing-page:serve",
+    "test": "jest",
     "graph": "nx graph"
   },
   "dependencies": {
@@ -58,8 +59,11 @@
     "@nestjs/cli": "^10.4.9",
     "@nestjs/schematics": "^10.2.3",
     "@types/express": "^5.0.0",
+    "@types/jest": "^29.5.14",
     "@types/node": "^22.10.2",
+    "jest": "^29.7.0",
     "nx": "^23.0.1",
+    "ts-jest": "^29.4.11",
     "tslib": "^2.8.1",
     "typescript": "~5.6.3",
     "zone.js": "~0.15.0"

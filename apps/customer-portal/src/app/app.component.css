@@ -63,6 +63,35 @@ h1 {
   border-color: #fde68a;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reset {
+  min-height: 32px;
+  padding: 0 14px;
+  color: #176b5d;
+  background: transparent;
+  border: 1px solid #176b5d;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reset:hover:not(:disabled) {
+  color: #ffffff;
+  background: #176b5d;
+}
+
+.reset:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .panel {
   background: #ffffff;
   border: 1px solid #dbe3ef;
@@ -172,6 +201,12 @@ h1 {
   40% {
     opacity: 1;
   }
+}
+
+.typing-status {
+  margin-left: 8px;
+  color: #697386;
+  font-size: 0.84rem;
 }
 
 .solution-link {
@@ -304,6 +339,15 @@ button[type='submit'] {
 
 .card.flash {
   outline: 2px solid #176b5d;
+}
+
+/* Older cards step back visually; the newest one is the current solution. */
+.solution-list .card:not(:first-of-type) {
+  opacity: 0.8;
+}
+
+.solution-list .card:not(:first-of-type):hover {
+  opacity: 1;
 }
 
 .card h2 {

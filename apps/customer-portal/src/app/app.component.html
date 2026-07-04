@@ -4,9 +4,20 @@
       <p class="eyebrow">TRIZ AI agent</p>
       <h1>Inventive Problem Solver</h1>
     </div>
-    <span class="status" [class.status-busy]="loading()">
-      {{ loading() ? 'Myślę…' : 'Gotowy' }}
-    </span>
+    <div class="topbar-actions">
+      <button
+        type="button"
+        class="reset"
+        (click)="resetChat()"
+        [disabled]="loading()"
+        title="Wyczyść rozmowę i panel rozwiązań"
+      >
+        ✨ Nowy problem
+      </button>
+      <span class="status" [class.status-busy]="loading()">
+        {{ loading() ? 'Myślę…' : 'Gotowy' }}
+      </span>
+    </div>
   </header>
 
   <div class="layout">
@@ -18,6 +29,11 @@
             @if (bubble.solutionId) {
               <button type="button" class="solution-link" (click)="scrollToSolution(bubble.solutionId!)">
                 → zobacz rozwiązanie #{{ bubble.solutionId }} w panelu
+              </button>
+            }
+            @if (bubble.retry && $last && !loading()) {
+              <button type="button" class="solution-link" (click)="retry()">
+                ↻ Spróbuj ponownie
               </button>
             }
             @if ($last && !loading() && bubble.suggestions?.length) {
@@ -34,16 +50,19 @@
         @if (loading()) {
           <div class="msg bot typing">
             <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="typing-status">{{ loadingStatus() }}</span>
           </div>
         }
       </div>
 
       <form class="composer" (ngSubmit)="send()">
         <textarea
+          #composerInput
           name="input"
           rows="1"
           [(ngModel)]="input"
           (keydown.enter)="onEnter($event)"
+          (input)="autoGrow()"
           placeholder="Opisz problem lub dopytaj…"
           [disabled]="loading()"
         ></textarea>
