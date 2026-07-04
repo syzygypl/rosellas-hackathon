@@ -12,6 +12,7 @@ export interface ChatMessage {
 }
 
 export interface ChatRequest {
+  sessionId?: string;
   messages: ChatMessage[];
 }
 
@@ -73,7 +74,12 @@ export class ChatService {
       'api.chat',
       {
         input: req,
-        metadata: { route: 'POST /api/chat', messageCount: req.messages?.length ?? 0 },
+        sessionId: this.cleanSessionId(req.sessionId),
+        metadata: {
+          route: 'POST /api/chat',
+          messageCount: req.messages?.length ?? 0,
+          sessionId: this.cleanSessionId(req.sessionId) ?? 'none',
+        },
         tags: ['api', 'chat'],
       },
       async () => {
@@ -246,6 +252,11 @@ export class ChatService {
     if (Array.isArray(value)) return value.map(Number).filter(Number.isFinite);
     if (value != null && Number.isFinite(Number(value))) return [Number(value)];
     return [];
+  }
+
+  private cleanSessionId(value: unknown): string | undefined {
+    const text = String(value ?? '').trim();
+    return text ? text.slice(0, 200) : undefined;
   }
 
   // --- LLM-free fallback path ------------------------------------------------

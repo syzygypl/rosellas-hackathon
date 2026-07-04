@@ -113,6 +113,7 @@ Frontend environment:
 
 - Local Angular env points to `http://localhost:8080/api`.
 - Local Angular env includes `appVersion`, `buildSha`, and `buildTime` fields used by the UI version badge.
+- The customer portal creates a per-browser-tab chat `sessionId`, displays it as muted copyable text at the bottom of the chat, and sends it with every `/api/chat` request.
 - Frontend deploy workflows resolve the paired backend Cloud Run URL and rewrite the app production environment with `<backend-url>/api` plus frontend build metadata during the CI build.
 
 Landing page environment:

@@ -1,5 +1,24 @@
 # Rosellas Hackathon
 
+## Cloud Addresses
+
+Project: `crud-hackathon-ml-20260703`, region: `europe-west1`.
+
+- GCP Console: https://console.cloud.google.com/home/dashboard?project=crud-hackathon-ml-20260703
+- Cloud Run services: https://console.cloud.google.com/run?project=crud-hackathon-ml-20260703
+- Logs Explorer: https://console.cloud.google.com/logs/query?project=crud-hackathon-ml-20260703
+- Error Reporting: https://console.cloud.google.com/errors?project=crud-hackathon-ml-20260703
+- Monitoring: https://console.cloud.google.com/monitoring?project=crud-hackathon-ml-20260703
+
+Public service URLs:
+
+- `general-ai-agent`: https://general-ai-agent-59918194944.europe-west1.run.app
+- `triz-mcp-server`: https://triz-mcp-server-59918194944.europe-west1.run.app
+- `crud-backend`: https://crud-backend-sjd2cgjmta-ew.a.run.app
+- `crud-frontend`: https://crud-frontend-sjd2cgjmta-ew.a.run.app
+
+Full infrastructure links live in [docs/google-infra-links.md](docs/google-infra-links.md).
+
 Nx workspace for the hackathon apps.
 
 - `apps/general-ai-agent/`: NestJS API from the MVP branch.
@@ -94,6 +113,11 @@ per turn:
 
 All TRIZ and SCAMPER knowledge lives on the MCP servers. Without an OpenAI key
 the app still works (TRIZ pipeline only) — no external LLM is required.
+
+The frontend creates a per-browser-tab `sessionId`, sends it with every
+`POST /api/chat` request, and shows it as muted copyable text at the bottom of
+the chat. When Langfuse is enabled, the backend attaches that value as the
+Langfuse session id for the chat trace and nested agent/model/tool observations.
 
 Backend config (`apps/general-ai-agent/.env`):
 

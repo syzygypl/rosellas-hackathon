@@ -36,7 +36,7 @@ interface SolutionCard {
 
 interface Toast {
   id: number;
-  kind: 'warning' | 'error';
+  kind: 'info' | 'warning' | 'error';
   title: string;
   body: string;
 }
@@ -92,6 +92,7 @@ export class AppComponent implements AfterViewChecked {
   toasts = signal<Toast[]>([]);
   loading = signal(false);
   loadingStatus = signal('');
+  sessionId = this.loadSessionId();
 
   /** Full conversation history, sent to the backend on every turn. */
   private history: ChatMessage[] = [];
@@ -178,7 +179,7 @@ export class AppComponent implements AfterViewChecked {
     this.loading.set(true);
     this.startProgress();
 
-    this.chatApi.chat({ messages: [...this.history] }).subscribe({
+    this.chatApi.chat({ sessionId: this.sessionId, messages: [...this.history] }).subscribe({
       next: (result) => {
         this.finishRequest();
         this.history.push({
@@ -264,6 +265,22 @@ export class AppComponent implements AfterViewChecked {
     this.toasts.update((toasts) => toasts.filter((t) => t.id !== id));
   }
 
+  async copySessionId(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(this.sessionId);
+    } catch {
+      const input = document.createElement('input');
+      input.value = this.sessionId;
+      input.style.position = 'fixed';
+      input.style.opacity = '0';
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      input.remove();
+    }
+    this.showToast('info', 'Session id copied', this.sessionId);
+  }
+
   engineLabel(engine: 'agent' | 'pipeline'): string {
     return engine === 'agent' ? '🤖 agent' : '⚙️ pipeline';
   }
@@ -344,6 +361,18 @@ export class AppComponent implements AfterViewChecked {
     const id = ++this.nextToastId;
     this.toasts.update((toasts) => [...toasts, { id, kind, title, body }]);
     setTimeout(() => this.dismissToast(id), kind === 'error' ? 14000 : 10000);
+  }
+
+  private loadSessionId(): string {
+    const key = 'rosellas-chat-session-id';
+    const existing = sessionStorage.getItem(key);
+    if (existing) return existing;
+    const id =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `session-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    sessionStorage.setItem(key, id);
+    return id;
   }
 
   private escape(value: string): string {
