@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+dist
+**/dist
+!apps/examples/backend/dist
+!apps/examples/backend/dist/**
+.angular
+**/.angular
+.nx
+**/.nx
+.git
+.env
+.env.*
+npm-debug.log*

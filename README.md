@@ -2,9 +2,9 @@
 
 Two-service CRUD demo for Google Cloud Run:
 
-- `frontend/`: Angular SPA served by nginx on Cloud Run.
-- `backend/`: NestJS API under `/api`, backed by Firestore.
-- root workspace: Nx monorepo orchestration over npm workspaces for `backend/` and `frontend/`.
+- `apps/examples/frontend/`: Angular SPA served by nginx on Cloud Run.
+- `apps/examples/backend/`: NestJS API under `/api`, backed by Firestore.
+- root workspace: Nx monorepo with a single root `package.json` and `package-lock.json`.
 - `.github/workflows/`: independent GitHub Actions workflows for infra bootstrap, backend deploy, and frontend deploy.
 
 The deployment path is intentionally small: GitHub Actions authenticates to GCP with Workload Identity Federation, Google Cloud Build builds Docker images, Artifact Registry stores images, and Cloud Run runs the services.
@@ -61,10 +61,12 @@ Run `.github/workflows/infra-bootstrap.yml` manually once before the first deplo
 
 Current GCP links and resource URLs are documented in [docs/google-infra-links.md](docs/google-infra-links.md).
 
+AI agent startup skills are centralized in [skills/](skills/), with entry points for Codex, Cursor, and Claude documented in [docs/ai/README.md](docs/ai/README.md).
+
 After that:
 
-- changes under `backend/**` deploy only `crud-backend`;
-- changes under `frontend/**` deploy only `crud-frontend`;
+- changes under `apps/examples/backend/**` deploy only `crud-backend`;
+- changes under `apps/examples/frontend/**` deploy only `crud-frontend`;
 - frontend deploy resolves the current `crud-backend` Cloud Run URL and builds Angular with `API_URL=<backend-url>/api`;
 - backend deploy sets `GOOGLE_CLOUD_PROJECT` and, when the frontend service already exists, `CORS_ORIGIN`.
 

@@ -6,7 +6,10 @@ on:
       - main
       - master
     paths:
-      - 'backend/**'
+      - 'apps/examples/backend/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'nx.json'
   workflow_dispatch:
 
 permissions:
@@ -50,15 +53,28 @@ jobs:
         with:
           project_id: ${{ env.PROJECT_ID }}
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Build backend
+        run: |
+          npm ci
+          npm run build:backend
+
       - name: Build and publish backend image
         run: |
           IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$ARTIFACT_REPOSITORY/$IMAGE_NAME:$GITHUB_SHA"
-          BUILD_ID="$(gcloud builds submit backend \
+          BUILD_ID="$(gcloud builds submit . \
+            --config apps/examples/backend/cloudbuild.yaml \
             --gcs-source-staging-dir "gs://$CLOUD_BUILD_SOURCE_BUCKET/source" \
             --gcs-log-dir "gs://$CLOUD_BUILD_SOURCE_BUCKET/logs" \
+            --substitutions "_IMAGE=$IMAGE" \
             --async \
             --format='value(id)' \
-            --tag "$IMAGE" \
             --project "$PROJECT_ID")"
 
           echo "Cloud Build: https://console.cloud.google.com/cloud-build/builds/$BUILD_ID?project=$PROJECT_ID"

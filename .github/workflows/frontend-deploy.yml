@@ -6,7 +6,10 @@ on:
       - main
       - master
     paths:
-      - 'frontend/**'
+      - 'apps/examples/frontend/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'nx.json'
   workflow_dispatch:
 
 permissions:
@@ -62,18 +65,18 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Build Angular frontend
         run: |
-          printf "export const environment = {\n  production: true,\n  apiUrl: '%s',\n};\n" "$API_URL" > frontend/src/environments/environment.prod.ts
-          npm ci --prefix frontend
-          npm --prefix frontend run build
+          printf "export const environment = {\n  production: true,\n  apiUrl: '%s',\n};\n" "$API_URL" > apps/examples/frontend/src/environments/environment.prod.ts
+          npm ci
+          npm run build:frontend
 
       - name: Build and publish frontend image
         run: |
           IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$ARTIFACT_REPOSITORY/$IMAGE_NAME:$GITHUB_SHA"
-          BUILD_ID="$(gcloud builds submit frontend \
+          BUILD_ID="$(gcloud builds submit apps/examples/frontend \
             --gcs-source-staging-dir "gs://$CLOUD_BUILD_SOURCE_BUCKET/source" \
             --gcs-log-dir "gs://$CLOUD_BUILD_SOURCE_BUCKET/logs" \
             --async \
