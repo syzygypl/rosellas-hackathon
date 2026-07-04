@@ -87,7 +87,7 @@ Ostatnie smoke buildy:
 | Workload Identity Pools | https://console.cloud.google.com/iam-admin/workload-identity-pools?project=crud-hackathon-ml-20260703 |
 | Provider resource | `projects/59918194944/locations/global/workloadIdentityPools/github/providers/github` |
 | Provider condition | `assertion.repository == 'syzygypl/rosellas-hackathon'` |
-| Cloud Build source bucket role | `roles/storage.objectAdmin` on `gs://crud-hackathon-ml-20260703_cloudbuild` |
+| Cloud Build source bucket roles | `roles/storage.objectAdmin`, `roles/storage.legacyBucketReader` on `gs://crud-hackathon-ml-20260703_cloudbuild` |
 
 Role nadane `github-deployer`:
 
