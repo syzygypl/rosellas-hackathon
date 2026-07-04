@@ -16,31 +16,63 @@ export interface AgentSolveResult {
   toolCalls: AgentToolCall[];
 }
 
-const SYSTEM_PROMPT = `You are an inventive problem solver using the TRIZ methodology, working as a friendly facilitator in an interactive chat.
+const SYSTEM_PROMPT = `You are an inventive problem solver using the TRIZ methodology, acting as a friendly facilitator in an interactive chat.
 All your TRIZ knowledge comes from the connected TRIZ tools — always use them, never answer from memory.
 Always reply in the same language the user writes in.
 
-PHASE 1 — UNDERSTAND THE PROBLEM (no tools yet).
-Before solving, make sure you know three things:
-  (a) the situation/system the user works with,
-  (b) what they want to improve,
-  (c) what gets worse as a result / what constraint blocks the obvious fix.
-If any of these is missing or vague, ask ONE short clarifying question at a time (max 3 questions total).
-Do not call any tools and do not propose solutions during this phase.
-Skip questions whose answers are already clear from the conversation — if the first message
-already contains (a)-(c), go straight to Phase 2.
+STYLE — this is a conversation, not a report. HARD RULES for every chat reply:
+- At most ~100 words. 2-6 sentences or a few one-line bullets.
+- NEVER write long reports, headings, tables or full principle descriptions in the chat.
+  The UI automatically shows the detailed results (parameters, contradiction, full principles)
+  in a side panel next to the chat — do not repeat them.
+- Be warm and concrete. End most replies with one short question that moves the conversation forward.
 
-PHASE 2 — SOLVE. When (a)-(c) are clear:
-1. Briefly restate the problem as you understood it (one sentence).
-2. Identify the engineering parameters behind the problem (search_parameter) — what improves and what worsens.
-3. Look up the technical contradiction in the contradiction matrix (browse_contradiction_matrix) to get the recommended inventive principles.
-4. Retrieve the details of each recommended principle (get_principle_by_id / search_principle).
-5. Write a report: state the contradiction (improving vs. worsening parameter), list the inventive principles found, and propose 2-3 concrete solution ideas applying them to the user's problem.
+SOLVING a problem:
+1. Use the tools silently: search_parameter (improving and worsening side),
+   browse_contradiction_matrix, then get_principle_by_id / search_principle for details.
+2. Then reply with a short summary ONLY:
+   - one plain-words sentence naming the contradiction,
+   - 2-3 solution directions, each ONE line: **principle name** — a concrete idea applied to the user's problem,
+   - one closing line, e.g. asking which direction to explore deeper.
 
-FOLLOW-UPS: when the user asks about an earlier solution (clarification, comparison, "tell me more"),
-answer conversationally from the context of the chat — only call tools again if new TRIZ data is needed.
-
+FOLLOW-UPS: answer briefly from chat context; call tools again only if new TRIZ data is needed.
 Ground every claim in tool output.`;
+
+const INTAKE_SYSTEM_PROMPT = `You are the intake gate of a TRIZ problem-solving chat.
+Inspect the conversation and decide whether these three things are already known:
+  (a) the situation/system the user works with,
+  (b) what the user wants to improve,
+  (c) what gets worse as a result / which constraint blocks the obvious fix.
+
+Set complete=true when all three are reasonably clear (they need not be perfectly precise),
+or when the user's latest message is a follow-up about an earlier solution rather than a new problem.
+
+Otherwise set complete=false and write ONE short, friendly clarifying question (question field)
+in the same language the user writes in, about the single most important missing piece.
+Max 2 sentences; you may add 2-4 very short example options as bullets. Ask about one thing only.`;
+
+const SUMMARY_SYSTEM_PROMPT = `You compress TRIZ solution reports into short chat messages.
+Write in the same language as the report. Maximum ~80 words, structured as:
+1. one plain-words sentence naming the contradiction,
+2. 2-3 solution directions, each exactly ONE line: **principle name** — concrete idea,
+3. one short closing question (e.g. which direction to explore deeper).
+No headings, no horizontal rules, no tables. Mention that the full report is in the side panel.`;
+
+const INTAKE_SCHEMA = {
+  type: 'object',
+  properties: {
+    complete: {
+      type: 'boolean',
+      description: 'true when (a), (b) and (c) are known or the last message is a follow-up',
+    },
+    question: {
+      type: 'string',
+      description: 'the single clarifying question to ask when complete=false; empty string otherwise',
+    },
+  },
+  required: ['complete', 'question'],
+  additionalProperties: false,
+} as const;
 
 /**
  * Agentic solving path: a LangChain Deep Agent whose tools are discovered
@@ -55,6 +87,8 @@ export class AgentService {
   private readonly reasoningEffort = (process.env.OPENAI_REASONING_EFFORT ||
     'low') as 'minimal' | 'low' | 'medium' | 'high';
   private agentPromise: Promise<ReturnType<typeof createDeepAgent>> | null = null;
+  private intakeModel: { invoke(input: unknown): Promise<unknown> } | null = null;
+  private lightModel: ChatOpenAI | null = null;
 
   /** Build the MCP client + agent once, reuse across requests. */
   private getAgent() {
@@ -93,6 +127,50 @@ export class AgentService {
   async solve(problem: string): Promise<AgentSolveResult> {
     const { answer, toolCalls } = await this.chat([{ role: 'user', content: problem }]);
     return { problem, answer, toolCalls };
+  }
+
+  /**
+   * Intake gate: a cheap, tool-free structured-output call deciding whether the
+   * problem is understood well enough to solve. Returns a clarifying question
+   * to hand back to the user when it is not. Deterministic control flow lives
+   * in ChatService — the LLM only judges completeness and phrases the question.
+   */
+  async intake(
+    history: { role: 'user' | 'assistant'; content: string }[],
+  ): Promise<{ complete: boolean; question: string }> {
+    if (!this.intakeModel) {
+      this.intakeModel = new ChatOpenAI({
+        model: this.model,
+        reasoning: { effort: 'none' as any },
+        useResponsesApi: true,
+      }).withStructuredOutput(INTAKE_SCHEMA as any, { name: 'intake' });
+    }
+    const result = (await this.intakeModel.invoke([
+      { role: 'system', content: INTAKE_SYSTEM_PROMPT },
+      ...history.map((m) => ({ role: m.role, content: m.content })),
+    ])) as { complete?: boolean; question?: string };
+
+    const complete = Boolean(result?.complete);
+    this.logger.log(`Intake: complete=${complete}${complete ? '' : ` question="${result?.question}"`}`);
+    return { complete, question: String(result?.question ?? '') };
+  }
+
+  /** Compress a long solution report into a short chat-friendly summary. */
+  async summarize(report: string): Promise<string> {
+    if (!this.lightModel) {
+      this.lightModel = new ChatOpenAI({
+        model: this.model,
+        reasoning: { effort: 'none' as any },
+        useResponsesApi: true,
+      });
+    }
+    const res = await this.lightModel.invoke([
+      { role: 'system', content: SUMMARY_SYSTEM_PROMPT },
+      { role: 'user', content: report },
+    ]);
+    const text = this.contentToText(res.content);
+    this.logger.log(`Summarized report: ${report.length} -> ${text.length} chars`);
+    return text;
   }
 
   /** Run the agent over a full chat history (multi-turn). */

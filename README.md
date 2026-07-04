@@ -38,10 +38,12 @@ one of two engines per turn:
 - **agent** (when `OPENAI_API_KEY` is set) — the LangChain Deep Agent runs the
   conversation with the whole history and calls TRIZ MCP tools as needed; its
   tool calls are distilled into the side-panel card. The agent acts as a
-  **facilitator**: if the problem statement is vague, it first asks up to 2-3
-  short clarifying questions (what's the system, what to improve, what gets
-  worse), one at a time, and only then runs the TRIZ workflow — questions it
-  can already answer from the conversation are skipped.
+  **facilitator**: a fast intake gate (structured-output LLM call, no tools)
+  checks whether the system, the thing to improve and the thing that worsens
+  are all known — if not, the turn returns one short clarifying question
+  (max 3 per conversation) instead of solving. Once complete, the Deep Agent
+  runs the TRIZ workflow; if its report is long, the chat gets a compressed
+  ~80-word summary and the full report lands in the solution card.
 - **pipeline** (fallback, LLM-free) — every user turn is treated as a (refined)
   problem statement and routed through the deterministic pipeline:
   1. `search_parameter` (semantic, via embeddings) maps free text → TRIZ engineering parameters.

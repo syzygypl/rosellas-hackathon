@@ -20,6 +20,8 @@ export interface ChatSolution {
   principles: string;
   related: string;
   trail: string[];
+  /** Full agent report (markdown) when the chat answer is a compressed summary. */
+  report?: string;
 }
 
 export interface ChatResult {
@@ -65,11 +67,37 @@ export class ChatService {
   // --- Agent path -----------------------------------------------------------
 
   private async agentChat(messages: ChatMessage[], lastUserContent: string): Promise<ChatResult> {
+    // Guided intake: until the problem is understood (or 3 questions were asked),
+    // a cheap gate call either lets the solver run or returns ONE clarifying question.
+    const questionsAsked = messages.filter((m) => m.role === 'assistant').length;
+    if (questionsAsked < 3) {
+      const intake = await this.agent.intake(messages);
+      if (!intake.complete && intake.question) {
+        return { answer: intake.question, engine: 'agent', solution: null };
+      }
+    }
+
     const { answer, toolCalls } = await this.agent.chat(messages);
+
+    // Keep the chat conversational: a long solve report goes to the side panel
+    // in full, while the chat bubble gets a compressed summary.
+    let chatAnswer = answer;
+    let report: string | undefined;
+    if (toolCalls.length && answer.split(/\s+/).length > 130) {
+      try {
+        chatAnswer = await this.agent.summarize(answer);
+        report = answer;
+      } catch (err) {
+        this.logger.warn(`Report summarization failed, sending full answer: ${err}`);
+      }
+    }
+
     return {
-      answer,
+      answer: chatAnswer,
       engine: 'agent',
-      solution: toolCalls.length ? this.solutionFromToolCalls(lastUserContent, toolCalls) : null,
+      solution: toolCalls.length
+        ? { ...this.solutionFromToolCalls(lastUserContent, toolCalls), report }
+        : null,
     };
   }
 
