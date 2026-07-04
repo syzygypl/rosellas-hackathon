@@ -4,6 +4,8 @@ import { NestFactory } from '@nestjs/core';
 import { config } from 'dotenv';
 import { AppModule } from './app.module';
 import { initializeLangfuseTracing, shutdownLangfuseTracing } from './langfuse-init';
+import { CloudRunExceptionFilter } from './observability/cloud-run-exception.filter';
+import { CloudRunLogger, cloudRunRequestContextMiddleware } from './observability/cloud-run-logger';
 
 config();
 initializeLangfuseTracing();
@@ -27,7 +29,15 @@ function backendPort(): number {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const serviceName = process.env.K_SERVICE || 'general-ai-agent';
+  const logger = new CloudRunLogger(serviceName);
+  Logger.overrideLogger(logger);
+
+  const app = await NestFactory.create(AppModule, { logger });
+  app.useLogger(logger);
+  app.use(cloudRunRequestContextMiddleware());
+  app.useGlobalFilters(new CloudRunExceptionFilter(serviceName));
+
   app.setGlobalPrefix('api');
   app.enableCors({
     origin: corsOrigins(),

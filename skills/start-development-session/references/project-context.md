@@ -43,6 +43,7 @@ Use this document to load the Rosellas Hackathon project context before changing
 | Cloud Run images | `apps/examples/backend/Dockerfile`, `apps/examples/frontend/Dockerfile` | Service-specific container packaging. GitHub Actions builds Nx artifacts before Docker packaging. Backend uses `apps/examples/backend/cloudbuild.yaml` with repository root context. |
 | Deploy workflows | `.github/workflows/` | Infra bootstrap plus service-specific workflows named after Cloud Run services. |
 | Infra links | `docs/google-infra-links.md` | Current resource URLs and GCP identifiers. |
+| Observability docs | `docs/google-observability.md` | Google Cloud Observability baseline, Logs Explorer filters, and cost guardrails. |
 | Versioning docs | `docs/versioning/README.md` | Shared app version, build metadata, Swagger, UI badge, and workflow conventions. |
 | New app skill | `skills/add-new-application/SKILL.md` | Procedure for adding Nx applications under repo conventions. |
 
@@ -88,6 +89,7 @@ Backend environment:
 - `APP_VERSION`: displayed in Swagger and returned by `/api/version`; CI sets this from root `package.json`.
 - `GIT_SHA`: commit SHA returned by `/api/version`; CI sets this from `GITHUB_SHA`.
 - `BUILD_TIME`: UTC ISO timestamp returned by `/api/version`; CI sets this during deploy.
+- `LOG_LEVEL`: Cloud Run structured application log threshold; defaults to `INFO`.
 - `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY`: optional; when both are set, the backend exports Langfuse traces for `/api/chat`, `/api/agent/solve`, `/api/solve`, LangChain model/agent calls, and Nest-side MCP tool calls.
 - `LANGFUSE_BASE_URL`: defaults to `https://cloud.langfuse.com`.
 - `LANGFUSE_TRACING_ENVIRONMENT`: optional Langfuse environment label; use `local` locally and a deployed label such as `production` in Cloud Run.
@@ -112,6 +114,7 @@ TRIZ MCP environment:
 - `MCP_ALLOWED_HOSTS`: comma-separated Host headers accepted by MCP DNS rebinding protection. Cloud Run deploy sets this to the deployed regional service host plus local hosts.
 - `MCP_ALLOWED_ORIGINS`: comma-separated Origin headers accepted by MCP DNS rebinding protection when an Origin header is present.
 - `MCP_DNS_REBINDING_PROTECTION`: defaults to `true`.
+- `LOG_LEVEL`: Cloud Run structured application log threshold; defaults to `INFO`.
 - `EMBEDDING_SERVICE_URL`: external OpenAI-compatible embeddings API base URL. Current deployed default is `https://api.openai.com/v1`.
 - `EMBEDDING_MODEL`: embeddings model name. Current deployed default is `text-embedding-3-small`.
 - `EMBEDDING_API_KEY`: required for semantic TRIZ tools in deploy. `OPENAI_API_KEY` and local legacy `OPEN_AI_API_KEY` are accepted as fallbacks.
@@ -181,6 +184,13 @@ Optional GitHub Actions secrets:
 
 - `OPENAI_API_KEY` for `general-ai-agent`
 - `LANGFUSE_SECRET_KEY` for optional `general-ai-agent` tracing
+
+Google Observability baseline:
+
+- Cloud Run built-in metrics and request/container/system logs are used by default.
+- NestJS backends emit structured JSON logs and report only 5xx/unhandled exceptions to Error Reporting.
+- The TRIZ MCP server emits structured JSON logs and reports tool exceptions through Cloud Logging/Error Reporting-compatible entries.
+- The baseline intentionally avoids custom metrics, Prometheus samples, and custom OpenTelemetry spans to stay cost-safe.
 
 Do not assume deployed URLs are current from memory. Use `docs/google-infra-links.md` first, then verify with GCP/GitHub only when the user asks for live validation.
 

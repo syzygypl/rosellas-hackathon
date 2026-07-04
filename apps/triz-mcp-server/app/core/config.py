@@ -19,6 +19,7 @@ class Config(BaseSettings):
     MCP_ALLOWED_HOSTS: str = "localhost,localhost:*,127.0.0.1,127.0.0.1:*,0.0.0.0,0.0.0.0:*"
     MCP_ALLOWED_ORIGINS: str = ""
     MCP_DNS_REBINDING_PROTECTION: bool = True
+    LOG_LEVEL: str = "INFO"
 
     # ==========================================
     # Embeddings (semantic search in pytriz)

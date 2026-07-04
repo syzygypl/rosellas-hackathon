@@ -116,12 +116,19 @@ Role nadane `github-deployer`:
 
 ## Enabled APIs
 
+Uwaga: API obserwowalności dodane w tym branchu są zarządzane przez `infra-bootstrap.yml`.
+Uruchom workflow bootstrap przed pierwszym użyciem, jeśli nie są jeszcze aktywne w projekcie.
+
 | API | Console |
 | --- | --- |
 | Cloud Run API | https://console.cloud.google.com/apis/library/run.googleapis.com?project=crud-hackathon-ml-20260703 |
 | Cloud Build API | https://console.cloud.google.com/apis/library/cloudbuild.googleapis.com?project=crud-hackathon-ml-20260703 |
 | Artifact Registry API | https://console.cloud.google.com/apis/library/artifactregistry.googleapis.com?project=crud-hackathon-ml-20260703 |
 | Firestore API | https://console.cloud.google.com/apis/library/firestore.googleapis.com?project=crud-hackathon-ml-20260703 |
+| Cloud Logging API | https://console.cloud.google.com/apis/library/logging.googleapis.com?project=crud-hackathon-ml-20260703 |
+| Cloud Monitoring API | https://console.cloud.google.com/apis/library/monitoring.googleapis.com?project=crud-hackathon-ml-20260703 |
+| Error Reporting API | https://console.cloud.google.com/apis/library/clouderrorreporting.googleapis.com?project=crud-hackathon-ml-20260703 |
+| Cloud Trace API | https://console.cloud.google.com/apis/library/cloudtrace.googleapis.com?project=crud-hackathon-ml-20260703 |
 
 ## GitHub Actions
 

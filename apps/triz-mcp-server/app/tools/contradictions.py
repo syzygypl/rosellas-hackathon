@@ -1,4 +1,8 @@
+import logging
+
 from app.services.triz import get_store
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Data / retrieval tools (sync)
@@ -31,6 +35,7 @@ def browse_contradiction_matrix(
                 )
         return result.strip()
     except Exception as e:
+        logger.exception("browse_contradiction_matrix failed")
         return f"Error retrieving Inventive Principles: {e}"
 
 
@@ -47,6 +52,7 @@ async def search_parameter(query: str, limit: int = 5) -> str:
             output += f"• [{r.id}] {r.name}\n  {r.description}\n\n"
         return output.strip()
     except Exception as e:
+        logger.exception("search_parameter failed")
         return f"Error searching parameters: {e}"
 
 
@@ -63,6 +69,7 @@ async def search_principle(query: str, limit: int = 5) -> str:
             output += f"• [{r.id}] {r.name}\n  {r.description}\n\n"
         return output.strip()
     except Exception as e:
+        logger.exception("search_principle failed")
         return f"Error searching principles: {e}"
 
 
@@ -78,6 +85,7 @@ def get_random_principles(limit: int = 5) -> str:
             output += f"• [{p.id}] {p.name}\n  {p.description}\n\n"
         return output.strip()
     except Exception as e:
+        logger.exception("get_random_principles failed")
         return f"Error retrieving random principles: {e}"
 
 
@@ -95,6 +103,7 @@ def get_principle_by_id(principle_id: int) -> str:
             output += "Examples:\n" + "\n".join(f"• {e}" for e in p.examples)
         return output.strip()
     except Exception as e:
+        logger.exception("get_principle_by_id failed")
         return f"Error retrieving principle: {e}"
 
 
@@ -108,4 +117,5 @@ def get_parameter_by_id(parameter_id: int) -> str:
             output += "\nExamples:\n" + "\n".join(f"• {e}" for e in p.examples)
         return output.strip()
     except Exception as e:
+        logger.exception("get_parameter_by_id failed")
         return f"Error retrieving parameter: {e}"

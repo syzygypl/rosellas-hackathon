@@ -101,6 +101,23 @@ Backend config (`apps/general-ai-agent/.env`):
 | `LANGFUSE_BASE_URL` | `https://cloud.langfuse.com` | Langfuse host, override for self-hosted or non-default regions |
 | `LANGFUSE_TRACING_ENVIRONMENT` | `local` | Langfuse environment label |
 | `LANGCHAIN_CALLBACKS_BACKGROUND` | `false` | keeps LangChain callback export synchronous enough for Cloud Run shutdowns |
+| `LOG_LEVEL` | `INFO` | Cloud Run structured application log level; use `WARNING` to reduce log volume |
+
+## Google Cloud Observability
+
+The deployed Cloud Run services use the free/cost-safe Google Observability
+baseline:
+
+- Cloud Run built-in metrics and request/container/system logs.
+- Structured JSON application logs from the NestJS backends and TRIZ MCP server.
+- Error Reporting entries for unhandled/5xx backend errors and MCP tool
+  exceptions.
+- No custom metrics, Prometheus samples, or custom OpenTelemetry spans by
+  default.
+
+The infra bootstrap workflow enables Cloud Logging, Cloud Monitoring, Error
+Reporting, and Cloud Trace APIs. Details, Logs Explorer filters, and cost
+guardrails are in [docs/google-observability.md](docs/google-observability.md).
 
 Layout:
 
